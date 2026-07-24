@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -11,7 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './login.html'
 })
-export class Login {
+export class Login implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -25,7 +25,15 @@ export class Login {
 
   isLoading = signal<boolean>(false);
   errorMessage = signal<string>('');
+  inactivityNotice = signal<boolean>(false);
   showPassword = signal<boolean>(false);
+
+  ngOnInit(): void {
+    const reason = this.route.snapshot.queryParams['reason'];
+    if (reason === 'inactivity') {
+      this.inactivityNotice.set(true);
+    }
+  }
 
   togglePasswordVisibility(): void {
     this.showPassword.update(v => !v);

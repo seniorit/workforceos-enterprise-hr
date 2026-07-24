@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal, computed, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed, OnInit, effect } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from './core/services/auth.service';
 import { CurrencyService } from './core/services/currency.service';
+import { InactivityService } from './core/services/inactivity.service';
 import { testFirestoreConnection } from './core/config/firebase.config';
 
 @Component({
@@ -17,7 +18,18 @@ import { testFirestoreConnection } from './core/config/firebase.config';
 export class App implements OnInit {
   public authService = inject(AuthService);
   public currencyService = inject(CurrencyService);
+  public inactivityService = inject(InactivityService);
   public router = inject(Router);
+
+  constructor() {
+    effect(() => {
+      if (this.authService.isAuthenticated()) {
+        this.inactivityService.startTracking();
+      } else {
+        this.inactivityService.stopTracking();
+      }
+    });
+  }
 
   ngOnInit(): void {
     testFirestoreConnection();

@@ -1,15 +1,14 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Injectable, signal, computed } from '@angular/core';
+import { Observable, from, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { ExchangeRateInfo } from '../models/currency.model';
+import { db, handleFirestoreError, OperationType } from '../config/firebase.config';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CurrencyService {
-  private http = inject(HttpClient);
-  private apiUrl = '/api/currency/rate';
-
   // Signals for app-wide reactive rate
   public rateInfo = signal<ExchangeRateInfo>({
     rate: 36.50,
@@ -22,30 +21,45 @@ export class CurrencyService {
   public isUpdating = signal<boolean>(false);
 
   constructor() {
-    this.fetchRate().subscribe({
-      error: () => {
-        // Fallback initialized
-      }
-    });
+    this.fetchRate().subscribe();
   }
 
   fetchRate(): Observable<ExchangeRateInfo> {
-    return this.http.get<ExchangeRateInfo>(this.apiUrl).pipe(
+    return from(getDoc(doc(db, 'settings', 'currency'))).pipe(
+      map(docSnap => {
+        if (docSnap.exists()) {
+          return docSnap.data() as ExchangeRateInfo;
+        }
+        return this.rateInfo();
+      }),
       tap(info => {
         if (info && info.rate) {
           this.rateInfo.set(info);
         }
+      }),
+      catchError(() => {
+        return of(this.rateInfo());
       })
     );
   }
 
   updateRate(newRate: number, source = 'BCV (Oficial Banco Central de Venezuela)', updatedBy = 'Administrador'): Observable<ExchangeRateInfo> {
     this.isUpdating.set(true);
-    return this.http.post<ExchangeRateInfo>(this.apiUrl, {
+    const updatedInfo: ExchangeRateInfo = {
       rate: newRate,
+      currency: 'VES',
       source,
+      updated_at: new Date().toISOString(),
       updated_by: updatedBy
-    }).pipe(
+    };
+
+    return from(
+      setDoc(doc(db, 'settings', 'currency'), updatedInfo, { merge: true })
+        .then(() => updatedInfo)
+        .catch(err => {
+          handleFirestoreError(err, OperationType.UPDATE, 'settings/currency');
+        })
+    ).pipe(
       tap({
         next: (updated) => {
           this.rateInfo.set(updated);
@@ -87,3 +101,4 @@ export class CurrencyService {
     return `${this.formatVES(ves)} (${this.formatUSD(usdAmount)})`;
   }
 }
+

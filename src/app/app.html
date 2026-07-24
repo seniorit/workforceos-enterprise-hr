@@ -397,6 +397,77 @@
       </div>
     </div>
   }
+
+  <!-- Inactivity Security Warning Modal (15 Minutes Enterprise Timeout) -->
+  @if (inactivityService.showWarningModal()) {
+    <div class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
+      <div class="bg-white rounded-xl shadow-2xl border border-amber-200 max-w-md w-full overflow-hidden animate-scaleUp">
+        
+        <!-- Header -->
+        <div class="bg-amber-50 px-5 py-4 border-b border-amber-200 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-2xl">timer</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-amber-900 flex items-center gap-1.5">
+              <span>Advertencia de Inactividad</span>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-200 text-amber-900 rounded-full">
+                SEGURIDAD RRHH
+              </span>
+            </h3>
+            <p class="text-xs text-amber-800">
+              Cierre automático por protección de datos sensibles.
+            </p>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="p-5 space-y-4 text-slate-700 text-xs">
+          <p class="leading-relaxed">
+            Hemos detectado <strong class="text-slate-900">14 minutos de inactividad</strong> en su sesión de WorkforceOS. Por políticas de seguridad de la empresa y protección de información confidencial de nómina y empleados, su sesión finalizará en:
+          </p>
+
+          <!-- Countdown Display -->
+          <div class="p-4 bg-slate-900 rounded-xl text-center space-y-1 text-white border border-slate-800 shadow-inner">
+            <span class="text-[10px] uppercase font-mono tracking-widest text-slate-400 block">
+              Tiempo restante antes del cierre
+            </span>
+            <div class="text-3xl font-mono font-bold text-amber-400 tracking-wider">
+              00:{{ inactivityService.remainingSeconds() < 10 ? '0' + inactivityService.remainingSeconds() : inactivityService.remainingSeconds() }}
+            </div>
+            <span class="text-[11px] text-slate-400 block">
+              segundos
+            </span>
+          </div>
+
+          <p class="text-[11px] text-slate-500 italic">
+            Haga clic en el botón a continuación o mueva el cursor para confirmar que continúa trabajando y mantener su sesión activa.
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            (click)="inactivityService.logoutDueToInactivity()"
+            class="px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer"
+          >
+            Cerrar Sesión Ahora
+          </button>
+          
+          <button
+            type="button"
+            (click)="inactivityService.stayLoggedIn()"
+            class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-base">lock_open</span>
+            <span>Mantener Sesión Activa</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
 }
 
 

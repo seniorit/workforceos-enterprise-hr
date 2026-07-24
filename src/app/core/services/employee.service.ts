@@ -1,42 +1,93 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Injectable } from '@angular/core';
+import { Observable, from } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { EmployeeModel, CreateEmployee, UpdateEmployee } from '../models/employee.model';
+import { db, handleFirestoreError, OperationType } from '../config/firebase.config';
+import { collection, getDocs, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EmployeeService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = '/api/employees';
-
   getEmployees(filters?: { search?: string; department?: string; status?: string }): Observable<EmployeeModel[]> {
-    let params = new HttpParams();
-    if (filters?.search) {
-      params = params.set('search', filters.search);
-    }
-    if (filters?.department) {
-      params = params.set('department', filters.department);
-    }
-    if (filters?.status) {
-      params = params.set('status', filters.status);
-    }
-    return this.http.get<EmployeeModel[]>(this.apiUrl, { params });
+    return from(getDocs(collection(db, 'employees'))).pipe(
+      map(snapshot => {
+        let employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeModel));
+
+        if (filters?.search) {
+          const s = filters.search.toLowerCase();
+          employees = employees.filter(e =>
+            (e.full_name && e.full_name.toLowerCase().includes(s)) ||
+            (e.job_title && e.job_title.toLowerCase().includes(s)) ||
+            (e.work_email && e.work_email.toLowerCase().includes(s)) ||
+            (e.employee_id && e.employee_id.toLowerCase().includes(s))
+          );
+        }
+        if (filters?.department) {
+          employees = employees.filter(e => e.department.toLowerCase() === filters.department?.toLowerCase());
+        }
+        if (filters?.status) {
+          employees = employees.filter(e => e.status.toLowerCase() === filters.status?.toLowerCase());
+        }
+        return employees;
+      }),
+      catchError(err => {
+        handleFirestoreError(err, OperationType.LIST, 'employees');
+      })
+    );
   }
 
   getEmployeeById(id: string): Observable<EmployeeModel> {
-    return this.http.get<EmployeeModel>(`${this.apiUrl}/${id}`);
+    return from(getDoc(doc(db, 'employees', id))).pipe(
+      map(docSnap => {
+        if (!docSnap.exists()) {
+          throw new Error('Empleado no encontrado');
+        }
+        return { id: docSnap.id, ...docSnap.data() } as EmployeeModel;
+      }),
+      catchError(err => {
+        handleFirestoreError(err, OperationType.GET, `employees/${id}`);
+      })
+    );
   }
 
   createEmployee(employee: CreateEmployee): Observable<EmployeeModel> {
-    return this.http.post<EmployeeModel>(this.apiUrl, employee);
+    const id = (employee as unknown as { id?: string }).id || 'emp-' + Date.now();
+    const newEmp: EmployeeModel = {
+      id,
+      ...employee,
+      status: employee.status || 'Activo',
+      created_at: new Date().toISOString()
+    };
+
+    return from(
+      setDoc(doc(db, 'employees', id), newEmp)
+        .then(() => newEmp)
+        .catch(err => {
+          handleFirestoreError(err, OperationType.CREATE, `employees/${id}`);
+        })
+    );
   }
 
   updateEmployee(id: string, employee: UpdateEmployee): Observable<EmployeeModel> {
-    return this.http.put<EmployeeModel>(`${this.apiUrl}/${id}`, employee);
+    return from(
+      setDoc(doc(db, 'employees', id), employee, { merge: true })
+        .then(() => ({ ...employee, id } as EmployeeModel))
+        .catch(err => {
+          handleFirestoreError(err, OperationType.UPDATE, `employees/${id}`);
+        })
+    );
   }
 
+
   deleteEmployee(id: string): Observable<{ success: boolean; id: string }> {
-    return this.http.delete<{ success: boolean; id: string }>(`${this.apiUrl}/${id}`);
+    return from(
+      deleteDoc(doc(db, 'employees', id))
+        .then(() => ({ success: true, id }))
+        .catch(err => {
+          handleFirestoreError(err, OperationType.DELETE, `employees/${id}`);
+        })
+    );
   }
 }
+
