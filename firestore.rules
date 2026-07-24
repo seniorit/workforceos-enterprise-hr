@@ -2,10 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
     // Default deny catch-all
     match /{document=**} {
       allow read, write: if false;
@@ -13,32 +9,32 @@ service cloud.firestore {
 
     // Departments
     match /departments/{departmentId} {
-      allow read, write: if isValidId(departmentId);
+      allow read, write: if true;
     }
 
     // Employees
     match /employees/{employeeId} {
-      allow read, write: if isValidId(employeeId);
+      allow read, write: if true;
     }
 
     // Payrolls
     match /payrolls/{payrollId} {
-      allow read, write: if isValidId(payrollId);
+      allow read, write: if true;
     }
 
     // Attendances
     match /attendances/{attendanceId} {
-      allow read, write: if isValidId(attendanceId);
+      allow read, write: if true;
     }
 
     // System Users
     match /users/{userId} {
-      allow read, write: if isValidId(userId);
+      allow read, write: if true;
     }
 
     // Settings (Dashboard & Currency)
     match /settings/{settingId} {
-      allow read, write: if isValidId(settingId);
+      allow read, write: if true;
     }
   }
 }
