@@ -1,0 +1,6 @@
+{
+  "name": "WorkforceOS Enterprise HR",
+  "description": "Sistema de gestión de recursos humanos empresarial para administración de empleados, nómina, asistencia y paneles de control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "Department": {
+      "title": "Department",
+      "description": "Department organizational unit",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "code": { "type": "string", "maxLength": 20 },
+        "head_of_department": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "location": { "type": "string", "maxLength": 200 },
+        "budget": { "type": "number" },
+        "status": { "type": "string", "maxLength": 20 },
+        "employee_count": { "type": "number" }
+      },
+      "required": ["name", "code"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Employee record",
+      "type": "object",
+      "properties": {
+        "full_name": { "type": "string", "maxLength": 150 },
+        "birth_date": { "type": "string", "maxLength": 20 },
+        "gender": { "type": "string", "maxLength": 20 },
+        "personal_id": { "type": "string", "maxLength": 50 },
+        "tax_id": { "type": "string", "maxLength": 50 },
+        "employee_id": { "type": "string", "maxLength": 50 },
+        "start_date": { "type": "string", "maxLength": 20 },
+        "department": { "type": "string", "maxLength": 100 },
+        "job_title": { "type": "string", "maxLength": 100 },
+        "work_email": { "type": "string", "maxLength": 150 },
+        "phone_number": { "type": "string", "maxLength": 50 },
+        "emergency_contact": { "type": "string", "maxLength": 100 },
+        "bank_name": { "type": "string", "maxLength": 100 },
+        "account_number": { "type": "string", "maxLength": 100 },
+        "account_type": { "type": "string", "maxLength": 50 },
+        "mobile_bank_code": { "type": "string", "maxLength": 50 },
+        "mobile_tax_id": { "type": "string", "maxLength": 50 },
+        "mobile_phone": { "type": "string", "maxLength": 50 },
+        "mobile_pay_type": { "type": "string", "maxLength": 50 },
+        "contract_type": { "type": "string", "maxLength": 50 },
+        "concept_type": { "type": "string", "maxLength": 50 },
+        "fixed_amount": { "type": "number" },
+        "payment_frequency": { "type": "string", "maxLength": 50 },
+        "photo_url": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "maxLength": 20 }
+      },
+      "required": ["full_name", "department"]
+    },
+    "Payroll": {
+      "title": "Payroll",
+      "description": "Payroll payment record",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string", "maxLength": 50 },
+        "employee_name": { "type": "string", "maxLength": 150 },
+        "department": { "type": "string", "maxLength": 100 },
+        "base_salary": { "type": "number" },
+        "bonuses": { "type": "number" },
+        "deductions": { "type": "number" },
+        "net_pay": { "type": "number" },
+        "payment_date": { "type": "string", "maxLength": 20 },
+        "payment_status": { "type": "string", "maxLength": 50 },
+        "payment_method": { "type": "string", "maxLength": 50 },
+        "bank_name": { "type": "string", "maxLength": 100 },
+        "account_number": { "type": "string", "maxLength": 100 },
+        "mobile_phone": { "type": "string", "maxLength": 50 },
+        "recipient_id": { "type": "string", "maxLength": 50 },
+        "reference_number": { "type": "string", "maxLength": 100 },
+        "payment_rate": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["employee_name", "net_pay"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance record",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string", "maxLength": 50 },
+        "employee_name": { "type": "string", "maxLength": 150 },
+        "department": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string", "maxLength": 20 },
+        "expected_check_in": { "type": "string", "maxLength": 20 },
+        "expected_check_out": { "type": "string", "maxLength": 20 },
+        "check_in": { "type": "string", "maxLength": 20 },
+        "check_out": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "maxLength": 50 },
+        "hours_worked": { "type": "number" },
+        "late_minutes": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["employee_id", "date", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System user account",
+      "type": "object",
+      "properties": {
+        "full_name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "maxLength": 50 },
+        "department": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 20 },
+        "photo_url": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["full_name", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/departments/{departmentId}": {
+      "schema": { "$ref": "#/entities/Department" },
+      "description": "Collection of company departments"
+    },
+    "/employees/{employeeId}": {
+      "schema": { "$ref": "#/entities/Employee" },
+      "description": "Collection of company employees"
+    },
+    "/payrolls/{payrollId}": {
+      "schema": { "$ref": "#/entities/Payroll" },
+      "description": "Collection of payroll records"
+    },
+    "/attendances/{attendanceId}": {
+      "schema": { "$ref": "#/entities/Attendance" },
+      "description": "Collection of attendance logs"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Collection of system user accounts"
+    }
+  }
+}

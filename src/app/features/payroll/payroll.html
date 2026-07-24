@@ -1,0 +1,718 @@
+<div class="space-y-4 animate-entrance">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-lg border border-slate-200 shadow-xs">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-base font-bold text-slate-900 tracking-tight">Gestión de Nómina y Pagos en Bolívares (VES)</h1>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
+          Tasa BCV: Bs. {{ currencyService.currentRate() | number:'1.2-2' }}
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5">
+        Cálculo y ejecución de pagos en Bolívares según tasa oficial del Banco Central de Venezuela, sobre sueldos base expresados en Dólares ($ USD).
+      </p>
+    </div>
+    <button
+      (click)="openNewPayrollModal()"
+      class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded font-semibold text-xs transition-colors shadow-xs cursor-pointer active:scale-98"
+    >
+      <span class="material-symbols-outlined text-base">add_card</span>
+      <span>Generar Nueva Nómina</span>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  @if (successMessage()) {
+    <div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
+      <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+      <span>{{ successMessage() }}</span>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg flex items-center gap-2">
+      <span class="material-symbols-outlined text-rose-600">error</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  <!-- Summary Cards Expressed in Bolívares (Bs.) -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <!-- Total Nómina -->
+    <div class="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Monto Total Nómina (Bs.)</span>
+      <p class="text-xl font-black text-slate-900 mt-1 font-mono">
+        Bs. {{ totalNetVES() | number:'1.2-2' }}
+      </p>
+      <div class="flex justify-between items-center text-[11px] text-slate-500 font-mono mt-1">
+        <span>Monto Base en Dólares:</span>
+        <span class="font-bold text-slate-700">${{ totalNetUSD() | number:'1.2-2' }} USD</span>
+      </div>
+    </div>
+
+    <!-- Pagos Completados -->
+    <div class="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Pagos Liquidados (Bs.)</span>
+      <p class="text-xl font-black text-emerald-700 mt-1 font-mono">
+        Bs. {{ totalPaidVES() | number:'1.2-2' }}
+      </p>
+      <div class="flex justify-between items-center text-[11px] text-emerald-700 font-mono mt-1">
+        <span>Monto Base Pagado:</span>
+        <span class="font-bold">${{ totalPaidUSD() | number:'1.2-2' }} USD</span>
+      </div>
+    </div>
+
+    <!-- Pendientes por Pagos -->
+    <div class="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700">Pendiente por Pagar (Bs.)</span>
+      <p class="text-xl font-black text-amber-700 mt-1 font-mono">
+        Bs. {{ totalPendingVES() | number:'1.2-2' }}
+      </p>
+      <div class="flex justify-between items-center text-[11px] text-amber-700 font-mono mt-1">
+        <span>Por Transferir / Pago Móvil:</span>
+        <span class="font-bold">${{ totalPendingUSD() | number:'1.2-2' }} USD</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payroll Table -->
+  <div class="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+    @if (isLoading()) {
+      <div class="p-8 text-center">
+        <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs font-mono text-slate-500 mt-2">Cargando datos de nómina en Bolívares...</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200 font-bold">
+              <th class="py-2.5 px-3">Empleado</th>
+              <th class="py-2.5 px-3">Departamento</th>
+              <th class="py-2.5 px-3">Sueldo Base ($)</th>
+              <th class="py-2.5 px-3">Bonos / Deduc. ($)</th>
+              <th class="py-2.5 px-3 text-emerald-900 bg-emerald-50/50">Monto Neto a Pagar (Bs.)</th>
+              <th class="py-2.5 px-3">Fecha Pago</th>
+              <th class="py-2.5 px-3">Estado</th>
+              <th class="py-2.5 px-3 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-xs">
+            @for (p of payrolls(); track p.id) {
+              <tr class="hover:bg-slate-50/80 transition-colors">
+                <td class="py-2.5 px-3">
+                  <p class="font-bold text-slate-900">{{ p.employee_name }}</p>
+                  <p class="text-[10px] text-slate-500 font-mono">Vía {{ p.payment_method || 'Pago Móvil' }}</p>
+                </td>
+                <td class="py-2.5 px-3 text-slate-600">{{ p.department }}</td>
+                <td class="py-2.5 px-3 font-mono text-slate-700">${{ p.base_salary | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 font-mono">
+                  <span class="text-emerald-700 font-medium">+${{ p.bonuses | number:'1.2-2' }}</span> /
+                  <span class="text-rose-600 font-medium">-${{ p.deductions | number:'1.2-2' }}</span>
+                </td>
+                
+                <!-- Monto Neto a Pagar en Bolívares (VES) -->
+                <td class="py-2.5 px-3 font-mono bg-emerald-50/30">
+                  <p class="font-black text-emerald-950 text-sm">
+                    Bs. {{ currencyService.toVES(p.net_pay) | number:'1.2-2' }}
+                  </p>
+                  <p class="text-[10px] text-slate-500">
+                    Ref: ${{ p.net_pay | number:'1.2-2' }} USD
+                  </p>
+                </td>
+
+                <td class="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{{ p.payment_date }}</td>
+                <td class="py-2.5 px-3">
+                  @switch (p.payment_status) {
+                    @case ('Paid') {
+                      <div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Pagado
+                        </span>
+                        @if (p.reference_number) {
+                          <span class="block text-[10px] text-slate-500 font-mono mt-0.5">Ref: {{ p.reference_number }}</span>
+                        }
+                      </div>
+                    }
+                    @case ('Processing') {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        En Proceso
+                      </span>
+                    }
+                    @default {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        Pendiente
+                      </span>
+                    }
+                  }
+                </td>
+                <td class="py-2.5 px-3 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button
+                      (click)="viewReceipt(p)"
+                      class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded border border-slate-300 flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Ver Comprobante de Pago en Bolívares"
+                    >
+                      <span class="material-symbols-outlined text-xs text-blue-600">receipt_long</span>
+                      <span>Recibo</span>
+                    </button>
+
+                    @if (p.payment_status !== 'Paid') {
+                      <button
+                        (click)="openProcessPaymentModal(p)"
+                        class="px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded hover:bg-emerald-700 cursor-pointer transition-colors shadow-xs flex items-center gap-1"
+                        title="Procesar Pago Individual en Bolívares"
+                      >
+                        <span class="material-symbols-outlined text-xs">payments</span>
+                        <span>Pagar Bs.</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Modal: Generar Nueva Nómina en Bolívares -->
+@if (newPayrollModalOpen()) {
+  <div class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
+      
+      <div class="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-400">add_card</span>
+          <h2 class="text-sm font-bold">Generar Registro de Nómina (Venezuela)</h2>
+        </div>
+        <button (click)="closeNewPayrollModal()" class="text-slate-400 hover:text-white cursor-pointer">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- Employee Selector -->
+        <div>
+          <label for="payrollEmployeeSelect" class="block text-xs font-bold text-slate-700 mb-1">
+            Seleccionar Empleado <span class="text-rose-500">*</span>
+          </label>
+          <select
+            id="payrollEmployeeSelect"
+            [(ngModel)]="selectedEmployeeId"
+            (change)="onEmployeeSelectChange()"
+            class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            @for (emp of employees(); track emp.id) {
+              <option [value]="emp.id">
+                {{ emp.full_name }} ({{ emp.department }}) — Sueldo Base: ${{ emp.fixed_amount }} USD
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Amounts Grid in USD -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="newBaseSalaryUSD" class="block text-xs font-semibold text-slate-700 mb-1">
+              Sueldo Base ($ USD)
+            </label>
+            <input
+              id="newBaseSalaryUSD"
+              type="number"
+              [(ngModel)]="newBaseSalaryUSD"
+              class="w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded border border-slate-300"
+            />
+          </div>
+
+          <div>
+            <label for="newBonusesUSD" class="block text-xs font-semibold text-slate-700 mb-1">
+              Bonos ($ USD)
+            </label>
+            <input
+              id="newBonusesUSD"
+              type="number"
+              [(ngModel)]="newBonusesUSD"
+              class="w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded border border-slate-300 text-emerald-700"
+            />
+          </div>
+
+          <div>
+            <label for="newDeductionsUSD" class="block text-xs font-semibold text-slate-700 mb-1">
+              Deducciones ($ USD)
+            </label>
+            <input
+              id="newDeductionsUSD"
+              type="number"
+              [(ngModel)]="newDeductionsUSD"
+              class="w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded border border-slate-300 text-rose-700"
+            />
+          </div>
+        </div>
+
+        <!-- Payment Date & Method -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="newPaymentDate" class="block text-xs font-semibold text-slate-700 mb-1">
+              Fecha Estimada de Pago
+            </label>
+            <input
+              id="newPaymentDate"
+              type="date"
+              [(ngModel)]="newPaymentDate"
+              class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300"
+            />
+          </div>
+
+          <div>
+            <label for="newPaymentMethod" class="block text-xs font-semibold text-slate-700 mb-1">
+              Método de Pago
+            </label>
+            <select
+              id="newPaymentMethod"
+              [(ngModel)]="newPaymentMethod"
+              class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white"
+            >
+              <option value="Pago Móvil">Pago Móvil Interbancario</option>
+              <option value="Transferencia Bancaria">Transferencia Bancaria (VES)</option>
+              <option value="Efectivo VES">Efectivo Bolívares</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Live Calculation Card in Bolívares -->
+        <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1">
+          <div class="flex justify-between items-center text-xs text-emerald-900">
+            <span class="font-bold">Total Neto a Liquidar en Bolívares:</span>
+            <span class="font-black text-sm font-mono text-emerald-950">
+              Bs. {{ calculateNewNetVES() | number:'1.2-2' }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center text-[11px] text-emerald-700 font-mono">
+            <span>Base en Dólares ($ USD):</span>
+            <span>${{ calculateNewNetUSD() | number:'1.2-2' }} USD</span>
+          </div>
+          <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-emerald-200/60">
+            <span>Tasa BCV Aplicada:</span>
+            <span>Bs. {{ currencyService.currentRate() | number:'1.2-2' }} / USD</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+        <button
+          (click)="closeNewPayrollModal()"
+          class="px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 bg-white border border-slate-300 rounded-lg cursor-pointer"
+        >
+          Cancelar
+        </button>
+        <button
+          (click)="createPayroll()"
+          class="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer shadow-xs"
+        >
+          Guardar Nómina
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal: Procesar Pago Individual en Bolívares con Selección de Datos Bancarios -->
+@if (payModalOpen() && selectedPayrollForPayment()) {
+  <div class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 text-white p-4 flex items-center justify-between border-b border-emerald-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+            <span class="material-symbols-outlined text-xl">payments</span>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold leading-tight">Procesar Pago Individual en Bolívares</h2>
+            <p class="text-xs text-emerald-300 font-medium">
+              Empleado: {{ selectedPayrollForPayment()?.employee_name }} ({{ selectedPayrollForPayment()?.department }})
+            </p>
+          </div>
+        </div>
+        <button (click)="closeProcessPaymentModal()" class="text-slate-400 hover:text-white cursor-pointer p-1">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-5 space-y-4 overflow-y-auto">
+        
+        <!-- Live Calculation Box -->
+        <div class="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 shadow-2xs">
+          <div class="flex justify-between items-baseline">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-900">Monto Neto a Transferir en Bolívares:</span>
+            <span class="text-xs text-slate-500 font-mono">Ref: ${{ selectedPayrollForPayment()?.net_pay | number:'1.2-2' }} USD</span>
+          </div>
+          <p class="text-2xl font-black text-emerald-950 font-mono mt-0.5">
+            Bs. {{ currencyService.toVES(selectedPayrollForPayment()?.net_pay || 0) | number:'1.2-2' }}
+          </p>
+          <div class="text-[10px] text-emerald-800 font-mono flex items-center gap-1.5 mt-1 pt-1.5 border-t border-emerald-200/80">
+            <span class="material-symbols-outlined text-xs text-emerald-600">currency_exchange</span>
+            <span>Tasa BCV del día: <strong>Bs. {{ currencyService.currentRate() | number:'1.2-2' }} / USD</strong></span>
+          </div>
+        </div>
+
+        <!-- Mode Selector: Registered vs Custom Data -->
+        <div>
+          <span class="block text-xs font-bold text-slate-800 mb-2">
+            Seleccionar Datos de Pago para esta Transacción <span class="text-rose-500">*</span>
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            
+            <button
+              type="button"
+              (click)="setPayMode('registered')"
+              [class]="payMode() === 'registered' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 shadow-xs ring-1 ring-emerald-600' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+              class="p-3 rounded-lg border text-left cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-base" [class]="payMode() === 'registered' ? 'text-emerald-600' : 'text-slate-400'">
+                  {{ payMode() === 'registered' ? 'radio_button_checked' : 'radio_button_unchecked' }}
+                </span>
+                <span class="text-xs font-bold">Datos Registrados</span>
+              </div>
+              <p class="text-[11px] text-slate-500 leading-tight pl-6">
+                Usar la cuenta y Pago Móvil del perfil del empleado.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              (click)="setPayMode('custom')"
+              [class]="payMode() === 'custom' ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 shadow-xs ring-1 ring-emerald-600' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+              class="p-3 rounded-lg border text-left cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-base" [class]="payMode() === 'custom' ? 'text-emerald-600' : 'text-slate-400'">
+                  {{ payMode() === 'custom' ? 'radio_button_checked' : 'radio_button_unchecked' }}
+                </span>
+                <span class="text-xs font-bold">Datos Nuevos / Editados</span>
+              </div>
+              <p class="text-[11px] text-slate-500 leading-tight pl-6">
+                Ingresar un banco, teléfono o cuenta distinto para este pago.
+              </p>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Registered Payment Data Display -->
+        @if (payMode() === 'registered') {
+          <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+              <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-emerald-600 text-base">badge</span>
+                Datos Bancarios Registrados del Empleado
+              </span>
+              <span class="text-[10px] font-mono text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">Ficha Activa</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+              <div>
+                <span class="text-slate-500 block text-[10px] uppercase font-semibold">Banco Destino:</span>
+                <span class="font-bold text-slate-900">{{ registeredBank() }}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px] uppercase font-semibold">Cédula / RIF Titular:</span>
+                <span class="font-bold font-mono text-slate-900">{{ registeredRecipientId() }}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px] uppercase font-semibold">Teléfono Pago Móvil:</span>
+                <span class="font-bold font-mono text-emerald-800">{{ registeredPhone() || 'No registrado' }}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px] uppercase font-semibold">Nro. de Cuenta:</span>
+                <span class="font-bold font-mono text-slate-800 text-[10px]">{{ registeredAccount() || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Custom / Override Form -->
+        @if (payMode() === 'custom') {
+          <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <span class="font-bold text-xs text-slate-800 flex items-center gap-1.5 pb-1 border-b border-slate-200">
+              <span class="material-symbols-outlined text-blue-600 text-base">edit_note</span>
+              Especificar Datos para este Pago
+            </span>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label for="payBankNameInput" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Banco Destino
+                </label>
+                <input
+                  id="payBankNameInput"
+                  type="text"
+                  [(ngModel)]="payBankName"
+                  placeholder="Ej. Banco de Venezuela"
+                  class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white"
+                />
+              </div>
+
+              <div>
+                <label for="payRecipientIdInput" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Cédula / RIF Titular
+                </label>
+                <input
+                  id="payRecipientIdInput"
+                  type="text"
+                  [(ngModel)]="payRecipientId"
+                  placeholder="V-18234567"
+                  class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label for="payMobilePhoneInput" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Teléfono Pago Móvil
+                </label>
+                <input
+                  id="payMobilePhoneInput"
+                  type="text"
+                  [(ngModel)]="payMobilePhone"
+                  placeholder="0412-1234567"
+                  class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label for="payAccountNumberInput" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Número de Cuenta (VES)
+                </label>
+                <input
+                  id="payAccountNumberInput"
+                  type="text"
+                  [(ngModel)]="payAccountNumber"
+                  placeholder="0102-0000-000000000000"
+                  class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Common Transaction Fields -->
+        <div class="space-y-2.5 pt-1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label for="payReferenceInput" class="block text-xs font-bold text-slate-800 mb-1">
+                Nro. de Referencia / Comprobante <span class="text-rose-500">*</span>
+              </label>
+              <input
+                id="payReferenceInput"
+                type="text"
+                [(ngModel)]="payReferenceNumber"
+                placeholder="Ej. PM-849201 ó 00192837"
+                class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 font-mono font-bold text-slate-900 bg-white focus:ring-2 focus:ring-emerald-500"
+              />
+              <span class="text-[10px] text-slate-500">Número de confirmación bancaria del pago.</span>
+            </div>
+
+            <div>
+              <label for="payDateInput" class="block text-xs font-bold text-slate-800 mb-1">
+                Fecha Efectiva de Pago
+              </label>
+              <input
+                id="payDateInput"
+                type="date"
+                [(ngModel)]="payDate"
+                class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="payNotesInput" class="block text-xs font-semibold text-slate-700 mb-1">
+              Observaciones o Notas Adicionales
+            </label>
+            <input
+              id="payNotesInput"
+              type="text"
+              [(ngModel)]="payNotes"
+              placeholder="Ej. Pago correspondiente a la 2da quincena de Julio"
+              class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+            />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+        <button
+          (click)="closeProcessPaymentModal()"
+          class="px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 bg-white border border-slate-300 rounded-lg cursor-pointer"
+        >
+          Cancelar
+        </button>
+        <button
+          (click)="confirmPaymentProcess()"
+          class="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg cursor-pointer shadow-xs flex items-center gap-1.5"
+        >
+          <span class="material-symbols-outlined text-base">check_circle</span>
+          <span>Confirmar y Registrar Pago Bs.</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal: Recibo de Pago en Bolívares (Comprobante Oficial) -->
+@if (receiptModalOpen() && selectedReceipt()) {
+  <div class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden">
+      
+      <!-- Receipt Header -->
+      <div class="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-emerald-400">receipt_long</span>
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Comprobante de Pago de Nómina</h2>
+            <p class="text-xs font-bold text-white">WorkforceOS Enterprise Venezuela, C.A.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            (click)="printReceipt()"
+            class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold flex items-center gap-1 cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-xs">print</span>
+            <span>Imprimir</span>
+          </button>
+          <button (click)="closeReceiptModal()" class="text-slate-400 hover:text-white cursor-pointer p-1">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Printable Receipt Body -->
+      <div class="p-6 space-y-4 text-slate-900">
+        
+        <!-- Header Company & Employee info -->
+        <div class="grid grid-cols-2 gap-4 pb-4 border-b border-slate-200 text-xs">
+          <div>
+            <p class="text-[10px] font-bold text-slate-500 uppercase">Empresa Emisora</p>
+            <p class="font-bold text-slate-900">WorkforceOS Venezuela, C.A.</p>
+            <p class="text-slate-600 font-mono text-[11px]">RIF: J-50192834-0</p>
+            <p class="text-slate-500 text-[11px]">Caracas, Venezuela</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] font-bold text-slate-500 uppercase">Fecha de Liquidación</p>
+            <p class="font-bold font-mono text-slate-900">{{ selectedReceipt()?.payment_date }}</p>
+            <p class="text-slate-600 text-[11px]">Vía: <strong>{{ selectedReceipt()?.payment_method }}</strong></p>
+            @if (selectedReceipt()?.reference_number) {
+              <p class="text-xs font-mono font-bold text-emerald-800 mt-0.5">Ref: #{{ selectedReceipt()?.reference_number }}</p>
+            }
+            <p class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded inline-block mt-1">
+              TASA BCV APLICADA: Bs. {{ (selectedReceipt()?.payment_rate || currencyService.currentRate()) | number:'1.2-2' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Employee Detail -->
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Empleado:</span>
+            <span class="font-bold text-slate-900">{{ selectedReceipt()?.employee_name }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Cédula / Tax ID:</span>
+            <span class="font-mono text-slate-800">
+              {{ selectedReceipt()?.recipient_id || receiptEmployee()?.personal_id || 'V-00000000' }}
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Departamento / Cargo:</span>
+            <span class="text-slate-800">{{ selectedReceipt()?.department }} — {{ receiptEmployee()?.job_title || 'Personal' }}</span>
+          </div>
+          <div class="flex justify-between border-t border-slate-200/80 pt-1">
+            <span class="text-slate-500">Banco / Pago Destino:</span>
+            <span class="font-mono text-slate-900 font-bold">
+              {{ selectedReceipt()?.bank_name || receiptEmployee()?.bank_name || 'Banco de Venezuela' }}
+              ({{ selectedReceipt()?.mobile_phone || receiptEmployee()?.mobile_phone || selectedReceipt()?.account_number || 'Pago Móvil' }})
+            </span>
+          </div>
+        </div>
+
+        <!-- Itemized Breakdown Table in Bolívares -->
+        <div>
+          <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Desglose de Conceptos (Bolívares / USD)</h3>
+          <table class="w-full text-xs text-left border border-slate-200 rounded overflow-hidden">
+            <thead class="bg-slate-100 text-[10px] uppercase font-bold text-slate-600 border-b border-slate-200">
+              <tr>
+                <th class="p-2">Concepto</th>
+                <th class="p-2 text-right">Base ($ USD)</th>
+                <th class="p-2 text-right font-bold text-slate-900">Monto Liquidador (Bs.)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
+              <tr>
+                <td class="p-2 text-slate-800">Sueldo Base Estipulado</td>
+                <td class="p-2 text-right text-slate-600">${{ selectedReceipt()?.base_salary | number:'1.2-2' }}</td>
+                <td class="p-2 text-right font-bold text-slate-900">
+                  Bs. {{ currencyService.toVES(selectedReceipt()?.base_salary || 0) | number:'1.2-2' }}
+                </td>
+              </tr>
+              @if ((selectedReceipt()?.bonuses || 0) > 0) {
+                <tr>
+                  <td class="p-2 text-emerald-700">(+) Bonificación / Incentivo</td>
+                  <td class="p-2 text-right text-emerald-700">+${{ selectedReceipt()?.bonuses | number:'1.2-2' }}</td>
+                  <td class="p-2 text-right font-bold text-emerald-800">
+                    +Bs. {{ currencyService.toVES(selectedReceipt()?.bonuses || 0) | number:'1.2-2' }}
+                  </td>
+                </tr>
+              }
+              @if ((selectedReceipt()?.deductions || 0) > 0) {
+                <tr>
+                  <td class="p-2 text-rose-600">(-) Deducciones Ley / SSO</td>
+                  <td class="p-2 text-right text-rose-600">-${{ selectedReceipt()?.deductions | number:'1.2-2' }}</td>
+                  <td class="p-2 text-right font-bold text-rose-700">
+                    -Bs. {{ currencyService.toVES(selectedReceipt()?.deductions || 0) | number:'1.2-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot class="bg-emerald-50 border-t-2 border-emerald-300">
+              <tr>
+                <td class="p-2.5 font-bold text-emerald-950 uppercase text-xs">Total Neto Pagado en Bolívares:</td>
+                <td class="p-2.5 text-right font-mono font-bold text-emerald-800 text-xs">
+                  ${{ selectedReceipt()?.net_pay | number:'1.2-2' }} USD
+                </td>
+                <td class="p-2.5 text-right font-mono font-black text-emerald-950 text-sm">
+                  Bs. {{ currencyService.toVES(selectedReceipt()?.net_pay || 0) | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="text-[10px] text-slate-500 pt-3 border-t border-slate-200 text-center space-y-0.5">
+          <p>Comprobante generado bajo las normativas legales de la República Bolivariana de Venezuela.</p>
+          <p>Monto en Dólares convenido como referencia de cálculo de acuerdo a la tasa oficial informada por el BCV.</p>
+        </div>
+
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button
+          (click)="closeReceiptModal()"
+          class="px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 bg-white border border-slate-300 rounded-lg cursor-pointer"
+        >
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
