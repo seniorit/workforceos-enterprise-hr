@@ -1,0 +1,570 @@
+<div class="max-w-7xl mx-auto animate-entrance pb-12 space-y-4">
+  <!-- Header Bar & Back Button -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+    <div class="flex items-center gap-2.5">
+      <a
+        routerLink="/employees"
+        class="w-7 h-7 rounded border border-slate-300 bg-white flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors cursor-pointer"
+        title="Volver a Lista de Empleados"
+      >
+        <span class="material-symbols-outlined text-base">arrow_back</span>
+      </a>
+      <div>
+        <h1 class="text-base font-bold text-slate-900 tracking-tight">
+          {{ isEditMode() ? 'Editar Registro de Empleado' : 'Agregar Nuevo Empleado' }}
+        </h1>
+        <p class="text-[11px] text-slate-500 mt-0.5">
+          Crea un nuevo registro de personal para la organización. Todos los campos marcados con (*) son obligatorios.
+        </p>
+      </div>
+    </div>
+
+    <!-- Alert Banners -->
+    @if (successMessage()) {
+      <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-1.5 rounded flex items-center gap-2 font-medium animate-entrance">
+        <span class="material-symbols-outlined text-base">check_circle</span>
+        <span>{{ successMessage() }}</span>
+      </div>
+    }
+
+    @if (errorMessage()) {
+      <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs px-3 py-1.5 rounded flex items-center gap-2 font-medium animate-entrance">
+        <span class="material-symbols-outlined text-base">error</span>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+  </div>
+
+  @if (isLoadingData()) {
+    <div class="bg-white p-8 rounded-lg border border-slate-200 text-center space-y-2">
+      <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p class="text-xs font-medium text-slate-500 font-mono">Cargando expediente del empleado...</p>
+    </div>
+  } @else {
+    <!-- Main Grid Layout -->
+    <form [formGroup]="employeeForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- LEFT COLUMN: Form Sections (8 Cols) -->
+      <div class="lg:col-span-8 space-y-4">
+        
+        <!-- SECTION 1: Información Personal -->
+        <section class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="material-symbols-outlined text-blue-600 text-base">badge</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Información Personal</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Nombre Completo -->
+            <div class="md:col-span-2">
+              <label for="input-full-name" class="block text-xs font-semibold text-slate-700 mb-1">
+                Nombre Completo <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-full-name"
+                type="text"
+                formControlName="full_name"
+                placeholder="e.g., Jane Doe"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              />
+              @if (employeeForm.get('full_name')?.invalid && employeeForm.get('full_name')?.touched) {
+                <p class="text-[10px] text-rose-600 mt-0.5">El nombre completo es obligatorio.</p>
+              }
+            </div>
+
+            <!-- Fecha de Nacimiento -->
+            <div>
+              <label for="input-birth-date" class="block text-xs font-semibold text-slate-700 mb-1">
+                Fecha de Nacimiento <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-birth-date"
+                type="date"
+                formControlName="birth_date"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              />
+            </div>
+
+            <!-- Género -->
+            <div>
+              <label for="input-gender" class="block text-xs font-semibold text-slate-700 mb-1">
+                Género <span class="text-rose-600">*</span>
+              </label>
+              <select
+                id="input-gender"
+                formControlName="gender"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              >
+                <option value="male">Masculino</option>
+                <option value="female">Femenino</option>
+                <option value="non_binary">No binario</option>
+                <option value="prefer_not_say">Prefiero no decirlo</option>
+              </select>
+            </div>
+
+            <!-- ID Personal -->
+            <div>
+              <label for="input-personal-id" class="block text-xs font-semibold text-slate-700 mb-1">
+                ID Personal / DNI <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-personal-id"
+                type="text"
+                formControlName="personal_id"
+                placeholder="e.g., ID-99201"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all font-mono"
+              />
+            </div>
+
+            <!-- ID Fiscal -->
+            <div>
+              <label for="input-tax-id" class="block text-xs font-semibold text-slate-700 mb-1">
+                ID Fiscal / RIF / SSN <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-tax-id"
+                type="text"
+                formControlName="tax_id"
+                placeholder="e.g., TAX-88192"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all font-mono"
+              />
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: Detalles de Empleo -->
+        <section class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="material-symbols-outlined text-blue-600 text-base">work</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Detalles de Empleo</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- ID de Empleado -->
+            <div>
+              <label for="input-employee-id" class="block text-xs font-semibold text-slate-700 mb-1">
+                ID de Empleado (Auto)
+              </label>
+              <input
+                id="input-employee-id"
+                type="text"
+                formControlName="employee_id"
+                readonly
+                class="w-full px-3 py-1.5 rounded border border-slate-200 text-xs bg-slate-100 text-slate-500 font-mono cursor-not-allowed"
+              />
+            </div>
+
+            <!-- Fecha de Inicio -->
+            <div>
+              <label for="input-start-date" class="block text-xs font-semibold text-slate-700 mb-1">
+                Fecha de Inicio <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-start-date"
+                type="date"
+                formControlName="start_date"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              />
+            </div>
+
+            <!-- Departamento -->
+            <div>
+              <label for="input-department" class="block text-xs font-semibold text-slate-700 mb-1">
+                Departamento <span class="text-rose-600">*</span>
+              </label>
+              <select
+                id="input-department"
+                formControlName="department"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              >
+                <option value="Engineering">Ingeniería</option>
+                <option value="Recursos Humanos">Recursos Humanos</option>
+                <option value="Sales">Ventas y Marketing</option>
+                <option value="Finanzas">Finanzas</option>
+                <option value="Operaciones">Operaciones</option>
+              </select>
+            </div>
+
+            <!-- Cargo -->
+            <div>
+              <label for="input-job-title" class="block text-xs font-semibold text-slate-700 mb-1">
+                Cargo / Puesto <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-job-title"
+                type="text"
+                formControlName="job_title"
+                placeholder="e.g., Ingeniero de Software Senior"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              />
+            </div>
+
+            <!-- Estado del Empleado -->
+            <div>
+              <label for="input-status" class="block text-xs font-semibold text-slate-700 mb-1">
+                Estado del Empleado <span class="text-rose-600">*</span>
+              </label>
+              <select
+                id="input-status"
+                formControlName="status"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all font-semibold"
+              >
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+                <option value="Cesado">Cesado</option>
+                <option value="Vacaciones">Vacaciones</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: Detalles de Contacto -->
+        <section class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="material-symbols-outlined text-blue-600 text-base">contacts</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Detalles de Contacto</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Correo Electrónico de Trabajo -->
+            <div>
+              <label for="input-work-email" class="block text-xs font-semibold text-slate-700 mb-1">
+                Correo Electrónico de Trabajo <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-work-email"
+                type="email"
+                formControlName="work_email"
+                placeholder="e.g., jane.doe@company.com"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              />
+            </div>
+
+            <!-- Número de Teléfono -->
+            <div>
+              <label for="input-phone-number" class="block text-xs font-semibold text-slate-700 mb-1">
+                Número de Teléfono <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-phone-number"
+                type="tel"
+                formControlName="phone_number"
+                placeholder="e.g., +1 (555) 000-0000"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all font-mono"
+              />
+            </div>
+
+            <!-- Contacto de Emergencia -->
+            <div class="md:col-span-2">
+              <label for="input-emergency-contact" class="block text-xs font-semibold text-slate-700 mb-1">
+                Contacto de Emergencia <span class="text-rose-600">*</span>
+              </label>
+              <input
+                id="input-emergency-contact"
+                type="text"
+                formControlName="emergency_contact"
+                placeholder="Nombre, parentesco y número telefónico"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              />
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 4: Información de Pago -->
+        <section class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-4">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="material-symbols-outlined text-blue-600 text-base">account_balance</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Información de Pago</h2>
+          </div>
+
+          <!-- Sub-Sección A: Datos Bancarios -->
+          <div class="space-y-3">
+            <h3 class="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">
+              Datos Bancarios
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label for="input-bank-name" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Banco <span class="text-rose-600">*</span>
+                </label>
+                <input
+                  id="input-bank-name"
+                  type="text"
+                  formControlName="bank_name"
+                  placeholder="e.g., Chase Bank"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+                />
+              </div>
+
+              <div>
+                <label for="input-account-number" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Número de Cuenta (20 Dígitos) <span class="text-rose-600">*</span>
+                </label>
+                <input
+                  id="input-account-number"
+                  type="text"
+                  formControlName="account_number"
+                  placeholder="00000000000000000000"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus font-mono transition-all"
+                />
+              </div>
+
+              <div>
+                <label for="input-account-type" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Tipo de Cuenta <span class="text-rose-600">*</span>
+                </label>
+                <select
+                  id="input-account-type"
+                  formControlName="account_type"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+                >
+                  <option value="corriente">Corriente</option>
+                  <option value="ahorro">Ahorro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-Sección B: Datos de Pago Móvil -->
+          <div class="space-y-3 pt-3 border-t border-slate-100">
+            <h3 class="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">
+              Datos de Pago Móvil
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label for="input-mobile-bank-code" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Código Banco (4 dígitos) <span class="text-rose-600">*</span>
+                </label>
+                <input
+                  id="input-mobile-bank-code"
+                  type="text"
+                  formControlName="mobile_bank_code"
+                  placeholder="e.g., 0102"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus font-mono transition-all"
+                />
+              </div>
+
+              <div>
+                <label for="input-mobile-tax-id" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Cédula / ID <span class="text-rose-600">*</span>
+                </label>
+                <input
+                  id="input-mobile-tax-id"
+                  type="text"
+                  formControlName="mobile_tax_id"
+                  placeholder="e.g., V-12345678"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus font-mono transition-all"
+                />
+              </div>
+
+              <div>
+                <label for="input-mobile-phone" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Teléfono Pago Móvil <span class="text-rose-600">*</span>
+                </label>
+                <input
+                  id="input-mobile-phone"
+                  type="text"
+                  formControlName="mobile_phone"
+                  placeholder="e.g., 0412-1234567"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus font-mono transition-all"
+                />
+              </div>
+
+              <div>
+                <label for="input-mobile-pay-type" class="block text-xs font-semibold text-slate-700 mb-1">
+                  Tipo de Pago Móvil <span class="text-rose-600">*</span>
+                </label>
+                <select
+                  id="input-mobile-pay-type"
+                  formControlName="mobile_pay_type"
+                  class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+                >
+                  <option value="personal">Personal</option>
+                  <option value="tercero">Tercero</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 5: Configuración Salarial -->
+        <section class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="material-symbols-outlined text-blue-600 text-base">payments</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Configuración Salarial</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Tipo de Contrato -->
+            <div>
+              <label for="input-contract-type" class="block text-xs font-semibold text-slate-700 mb-1">
+                Tipo de Contrato <span class="text-rose-600">*</span>
+              </label>
+              <select
+                id="input-contract-type"
+                formControlName="contract_type"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              >
+                <option value="indeterminado">Tiempo Indeterminado</option>
+                <option value="determinado">Tiempo Determinado</option>
+                <option value="obra">Por Obra / Proyecto</option>
+                <option value="freelance">Freelance / Servicios</option>
+              </select>
+            </div>
+
+            <!-- Tipo de Concepto -->
+            <div>
+              <label for="input-concept-type" class="block text-xs font-semibold text-slate-700 mb-1">
+                Tipo de Concepto <span class="text-rose-600">*</span>
+              </label>
+              <select
+                id="input-concept-type"
+                formControlName="concept_type"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              >
+                <option value="sueldo">Sueldo Base</option>
+                <option value="honorarios">Honorarios Profesionales</option>
+                <option value="bono">Bono Fijo</option>
+              </select>
+            </div>
+
+            <!-- Monto Fijo -->
+            <div>
+              <label for="input-fixed-amount" class="block text-xs font-semibold text-slate-700 mb-1">
+                Sueldo / Monto Base en Dólares ($ USD) <span class="text-rose-600">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">$</span>
+                <input
+                  id="input-fixed-amount"
+                  type="number"
+                  formControlName="fixed_amount"
+                  placeholder="0.00"
+                  class="w-full pl-7 pr-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus font-mono font-bold transition-all"
+                />
+              </div>
+
+              <!-- Live BCV Rate Bolívares Conversion Preview -->
+              <div class="text-[11px] text-emerald-800 mt-1.5 p-2 bg-emerald-50 rounded-md border border-emerald-200 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-emerald-600 text-base">currency_exchange</span>
+                <div>
+                  <span class="block leading-tight text-[10px] uppercase font-bold text-emerald-700">Equivalente en Bolívares (Pago en VES):</span>
+                  <span class="font-mono font-bold text-xs text-emerald-950">
+                    Bs. {{ currencyService.toVES(employeeForm.get('fixed_amount')?.value || 0) | number:'1.2-2' }}
+                  </span>
+                  <span class="text-[10px] text-slate-500 font-sans ml-1">
+                    (Tasa BCV del día: Bs. {{ currencyService.currentRate() | number:'1.2-2' }})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Frecuencia de Pago -->
+            <div>
+              <label for="input-payment-frequency" class="block text-xs font-semibold text-slate-700 mb-1">
+                Frecuencia de Pago <span class="text-rose-600">*</span>
+              </label>
+              <select
+                id="input-payment-frequency"
+                formControlName="payment_frequency"
+                class="w-full px-3 py-1.5 rounded border border-slate-300 text-xs bg-white text-slate-900 form-input-focus transition-all"
+              >
+                <option value="quincenal">Quincenal</option>
+                <option value="mensual">Mensual</option>
+                <option value="semanal">Semanal</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Profile Photo & Action Panel (4 Cols) -->
+      <div class="lg:col-span-4 space-y-4">
+        
+        <!-- CARD 1: Foto de Perfil -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-blue-600 text-base">photo_camera</span>
+            <span>Foto de Perfil</span>
+          </h2>
+
+          <div class="flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-center transition-all hover:border-blue-600">
+            <div class="relative group cursor-pointer mb-2">
+              <img
+                [src]="photoPreview()"
+                alt="Avatar Preview"
+                class="w-20 h-20 rounded-full object-cover border-2 border-white shadow-xs transition-transform group-hover:scale-105"
+              />
+              <label
+                for="avatar-upload"
+                class="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs hover:bg-blue-700 transition-all cursor-pointer"
+              >
+                <span class="material-symbols-outlined text-xs">edit</span>
+              </label>
+            </div>
+
+            <p class="text-xs font-semibold text-slate-800">Sube o arrastra una fotografía</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Soporta PNG, JPG o WEBP (máx. 5MB)</p>
+
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              (change)="onPhotoSelected($event)"
+              class="hidden"
+            />
+
+            <label
+              for="avatar-upload"
+              class="mt-3 px-3 py-1.5 bg-white hover:bg-slate-100 text-blue-700 text-xs font-semibold rounded border border-slate-300 cursor-pointer transition-colors"
+            >
+              Seleccionar Archivo
+            </label>
+          </div>
+        </div>
+
+        <!-- CARD 2: Acciones & Guardado -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-xs space-y-3 sticky top-20">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Acciones del Sistema</h2>
+          
+          <button
+            type="submit"
+            [disabled]="isSubmitting()"
+            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-2 px-3 rounded font-semibold text-xs transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+          >
+            @if (isSubmitting()) {
+              <div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Guardando en Backend...</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">save</span>
+              <span>{{ isEditMode() ? 'Actualizar Empleado' : 'Guardar Empleado' }}</span>
+            }
+          </button>
+
+          <button
+            type="button"
+            (click)="cancel()"
+            class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-3 rounded font-semibold text-xs transition-colors border border-slate-300 cursor-pointer text-center"
+          >
+            Cancelar
+          </button>
+
+          <!-- Info Banner -->
+          <div class="p-2.5 rounded bg-blue-50 border border-blue-100 text-blue-900 text-xs space-y-0.5">
+            <div class="flex items-center gap-1 font-bold text-[11px]">
+              <span class="material-symbols-outlined text-sm text-blue-600">info</span>
+              <span>Envío automático de correo</span>
+            </div>
+            <p class="text-[10px] leading-relaxed text-slate-600">
+              Se enviará un correo de bienvenida con las credenciales de acceso al portal del empleado.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </form>
+  }
+</div>
+

@@ -1,0 +1,540 @@
+<div class="space-y-4 animate-entrance">
+  <!-- Header with Title & Primary Action -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 shadow-xs">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-base font-bold text-slate-900 tracking-tight">Directorio de Empleados</h1>
+        <span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-mono font-bold rounded border border-blue-100">API_REST</span>
+      </div>
+      <p class="text-slate-500 text-xs mt-0.5">
+        Administra todo el personal, información de nómina, métodos de pago y estatus laboral.
+      </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap self-start md:self-auto">
+      <button
+        (click)="generateActiveEmployeesReport()"
+        class="px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 transition-colors"
+        title="Generar reporte impreso de personal activo"
+      >
+        <span class="material-symbols-outlined text-base">description</span>
+        <span>Reporte Empleados Activos</span>
+      </button>
+
+      <button
+        (click)="navigateToAdd()"
+        class="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 transition-colors"
+      >
+        <span class="material-symbols-outlined text-base">person_add</span>
+        <span>Agregar Nuevo Empleado</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Banners -->
+  @if (successMessage()) {
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2 rounded flex items-center justify-between animate-entrance font-medium">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">check_circle</span>
+        <span>{{ successMessage() }}</span>
+      </div>
+      <button (click)="successMessage.set(null)" class="text-emerald-700 hover:text-emerald-900 cursor-pointer">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs px-3 py-2 rounded flex items-center justify-between animate-entrance font-medium">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">error</span>
+        <span>{{ errorMessage() }}</span>
+      </div>
+      <button (click)="errorMessage.set(null)" class="text-rose-700 hover:text-rose-900 cursor-pointer">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Filter Controls Card -->
+  <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-xs grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
+    <!-- Search Bar -->
+    <div class="md:col-span-5 relative">
+      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event); onFilterChange()"
+        placeholder="Buscar por nombre, correo, cargo o ID..."
+        class="w-full pl-8 pr-3 py-1.5 rounded border border-slate-300 text-xs text-slate-800 bg-white form-input-focus"
+      />
+    </div>
+
+    <!-- Department Filter -->
+    <div class="md:col-span-3">
+      <select
+        [ngModel]="selectedDepartment()"
+        (ngModelChange)="selectedDepartment.set($event); onFilterChange()"
+        class="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs text-slate-800 bg-white form-input-focus"
+      >
+        <option value="all">Todos los Departamentos</option>
+        <option value="Engineering">Ingeniería</option>
+        <option value="Recursos Humanos">Recursos Humanos</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Sales">Ventas</option>
+        <option value="Operaciones">Operaciones</option>
+      </select>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="md:col-span-3">
+      <select
+        [ngModel]="selectedStatus()"
+        (ngModelChange)="selectedStatus.set($event); onFilterChange()"
+        class="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs text-slate-800 bg-white form-input-focus"
+      >
+        <option value="all">Todos los Estados</option>
+        <option value="Activo">Activo</option>
+        <option value="Inactivo">Inactivo</option>
+        <option value="Cesado">Cesado</option>
+        <option value="Vacaciones">Vacaciones</option>
+      </select>
+    </div>
+
+    <!-- Reset Button -->
+    <div class="md:col-span-1 flex justify-end">
+      <button
+        (click)="clearFilters()"
+        class="w-full md:w-auto px-2.5 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold flex items-center justify-center gap-1 border border-slate-300 cursor-pointer"
+        title="Limpiar filtros"
+      >
+        <span class="material-symbols-outlined text-base">filter_alt_off</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Employee Table Container -->
+  <div class="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+    @if (isLoading()) {
+      <div class="p-8 text-center space-y-2">
+        <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs text-slate-500 font-mono">Cargando `/api/employees`...</p>
+      </div>
+    } @else if (employees().length === 0) {
+      <div class="p-8 text-center space-y-2">
+        <span class="material-symbols-outlined text-3xl text-slate-400">person_off</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">No se encontraron empleados</h3>
+        <p class="text-xs text-slate-500">Ajusta los filtros de búsqueda o agrega un nuevo registro.</p>
+        <button
+          (click)="navigateToAdd()"
+          class="mt-2 inline-flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+        >
+          <span class="material-symbols-outlined text-base">add</span>
+          <span>Agregar Empleado</span>
+        </button>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+              <th class="p-2.5">Código ID</th>
+              <th class="p-2.5">Empleado</th>
+              <th class="p-2.5">Departamento / Cargo</th>
+              <th class="p-2.5">Contacto</th>
+              <th class="p-2.5">Banco / Pago</th>
+              <th class="p-2.5">Sueldo Base</th>
+              <th class="p-2.5">Estado</th>
+              <th class="p-2.5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (emp of employees(); track emp.id) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="p-2.5 font-mono font-semibold text-blue-600">
+                  {{ emp.employee_id }}
+                </td>
+                <td class="p-2.5">
+                  <div class="flex items-center gap-2.5">
+                    @if (emp.photo_url) {
+                      <img [src]="emp.photo_url" class="w-7 h-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+                    } @else {
+                      <div class="w-7 h-7 rounded bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center">
+                        {{ emp.full_name.substring(0,2).toUpperCase() }}
+                      </div>
+                    }
+                    <div>
+                      <p class="font-bold text-slate-900 text-xs">{{ emp.full_name }}</p>
+                      <p class="text-[10px] text-slate-500 font-mono">DNI: {{ emp.personal_id }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="p-2.5">
+                  <p class="font-medium text-slate-800">{{ emp.department }}</p>
+                  <p class="text-[10px] text-slate-500">{{ emp.job_title }}</p>
+                </td>
+                <td class="p-2.5">
+                  <p class="text-slate-800">{{ emp.work_email }}</p>
+                  <p class="text-[10px] text-slate-500 font-mono">{{ emp.phone_number }}</p>
+                </td>
+                <td class="p-2.5">
+                  <p class="font-medium text-slate-800">{{ emp.bank_name }}</p>
+                  <p class="text-[10px] text-slate-500 font-mono">PM: {{ emp.mobile_phone }}</p>
+                </td>
+                <td class="p-2.5 font-mono">
+                  <div class="font-bold text-slate-900">
+                    ${{ emp.fixed_amount | number:'1.2-2' }} <span class="text-[10px] font-normal text-slate-500">USD</span>
+                  </div>
+                  <div class="text-[11px] text-emerald-700 font-bold">
+                    Bs. {{ currencyService.toVES(emp.fixed_amount) | number:'1.2-2' }}
+                  </div>
+                </td>
+                <td class="p-2.5">
+                  @switch (emp.status) {
+                    @case ('Activo') {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Activo
+                      </span>
+                    }
+                    @case ('Active') {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Activo
+                      </span>
+                    }
+                    @case ('Inactivo') {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                        Inactivo
+                      </span>
+                    }
+                    @case ('Cesado') {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                        Cesado
+                      </span>
+                    }
+                    @case ('Vacaciones') {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        Vacaciones
+                      </span>
+                    }
+                    @default {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        {{ emp.status }}
+                      </span>
+                    }
+                  }
+                </td>
+                <td class="p-2.5 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button
+                      (click)="viewEmployeeDetails(emp)"
+                      class="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Ver Ficha Completa"
+                    >
+                      <span class="material-symbols-outlined text-base">visibility</span>
+                    </button>
+
+                    <button
+                      (click)="editEmployee(emp.id)"
+                      class="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Editar Empleado"
+                    >
+                      <span class="material-symbols-outlined text-base">edit</span>
+                    </button>
+
+                    <button
+                      (click)="deleteEmployee(emp)"
+                      class="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Eliminar Empleado"
+                    >
+                      <span class="material-symbols-outlined text-base">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Detail Modal -->
+  @if (selectedEmployee(); as selected) {
+    <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-entrance">
+      <div class="bg-white rounded-lg border border-slate-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+          <div class="flex items-center gap-2.5">
+            @if (selected.photo_url) {
+              <img [src]="selected.photo_url" class="w-10 h-10 rounded-full object-cover border border-blue-600" alt="Avatar" />
+            } @else {
+              <div class="w-10 h-10 rounded bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
+                {{ selected.full_name.substring(0,2).toUpperCase() }}
+              </div>
+            }
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">{{ selected.full_name }}</h2>
+              <p class="text-[11px] text-blue-600 font-mono">{{ selected.employee_id }} • {{ selected.job_title }}</p>
+            </div>
+          </div>
+
+          <button (click)="closeModal()" class="w-7 h-7 rounded bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 cursor-pointer">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <div class="p-4 space-y-4 text-xs text-slate-800">
+          <!-- General Info Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded border border-slate-200">
+            <div>
+              <span class="text-slate-500 block text-[10px] font-mono uppercase">Departamento</span>
+              <span class="font-semibold">{{ selected.department }}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[10px] font-mono uppercase">Cédula / DNI</span>
+              <span class="font-semibold font-mono">{{ selected.personal_id }}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[10px] font-mono uppercase">ID Fiscal / RIF</span>
+              <span class="font-semibold font-mono">{{ selected.tax_id }}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[10px] font-mono uppercase">Fecha Nacimiento</span>
+              <span class="font-semibold">{{ selected.birth_date }}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[10px] font-mono uppercase">Fecha Ingreso</span>
+              <span class="font-semibold">{{ selected.start_date }}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[10px] font-mono uppercase">Estado</span>
+              <span class="font-semibold text-emerald-700">{{ selected.status }}</span>
+            </div>
+          </div>
+
+          <!-- Contact & Emergency -->
+          <div class="space-y-1.5">
+            <h3 class="font-bold uppercase tracking-wider text-[10px] text-blue-600 font-mono">Contacto Directo</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <p><span class="text-slate-500">Email:</span> {{ selected.work_email }}</p>
+              <p><span class="text-slate-500">Teléfono:</span> <span class="font-mono">{{ selected.phone_number }}</span></p>
+              <p class="sm:col-span-2"><span class="text-slate-500">Contacto Emergencia:</span> {{ selected.emergency_contact }}</p>
+            </div>
+          </div>
+
+          <!-- Payment Info -->
+          <div class="space-y-1.5 border-t border-slate-200 pt-3">
+            <h3 class="font-bold uppercase tracking-wider text-[10px] text-blue-600 font-mono">Información Bancaria & Pago Móvil</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <p><span class="text-slate-500">Banco:</span> {{ selected.bank_name }}</p>
+              <p><span class="text-slate-500">Tipo Cuenta:</span> {{ selected.account_type }}</p>
+              <p class="sm:col-span-2"><span class="text-slate-500">Nº Cuenta:</span> <span class="font-mono">{{ selected.account_number }}</span></p>
+              <p><span class="text-slate-500">Cód Banco PM:</span> <span class="font-mono">{{ selected.mobile_bank_code }}</span></p>
+              <p><span class="text-slate-500">Teléfono PM:</span> <span class="font-mono">{{ selected.mobile_phone }}</span></p>
+            </div>
+          </div>
+
+          <!-- Salary Config -->
+          <div class="space-y-1.5 border-t border-slate-200 pt-3">
+            <h3 class="font-bold uppercase tracking-wider text-[10px] text-blue-600 font-mono">Configuración Salarial</h3>
+            <div class="grid grid-cols-2 gap-3 bg-slate-100 p-2.5 rounded border border-slate-200">
+              <div>
+                <span class="text-slate-500 block text-[10px] font-mono uppercase">Monto Fijo</span>
+                <span class="font-bold text-sm font-mono text-blue-700">${{ selected.fixed_amount | number:'1.2-2' }}</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px] font-mono uppercase">Frecuencia</span>
+                <span class="font-semibold capitalize">{{ selected.payment_frequency }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+          <button
+            (click)="editEmployee(selected.id); closeModal()"
+            class="px-3 py-1.5 bg-blue-600 text-white font-semibold text-xs rounded hover:bg-blue-700 cursor-pointer"
+          >
+            Editar Registro
+          </button>
+          <button
+            (click)="closeModal()"
+            class="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded hover:bg-slate-100 cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Reporte Consolidado de Empleados Activos -->
+  @if (activeReportModalOpen()) {
+    <div class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
+      <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+              <span class="material-symbols-outlined text-lg">description</span>
+            </div>
+            <div>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Reporte Oficial de Nómina</h2>
+              <p class="text-sm font-bold text-white leading-tight">Empleados en Estatus Activo</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              (click)="printReport()"
+              class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir / Exportar PDF</span>
+            </button>
+            <button (click)="closeActiveReportModal()" class="text-slate-400 hover:text-white cursor-pointer p-1">
+              <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Report Content -->
+        <div class="p-6 overflow-y-auto space-y-4 text-slate-900">
+          
+          <!-- Document Letterhead / Header -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-3 border-b border-slate-200 text-xs">
+            <div>
+              <p class="font-black text-slate-900 text-sm">WorkforceOS Enterprise Venezuela, C.A.</p>
+              <p class="text-slate-500 text-[11px]">RIF: J-50192834-0 — Dirección General de Gestión Humana</p>
+              <p class="text-slate-500 text-[11px]">Caracas, República Bolivariana de Venezuela</p>
+            </div>
+            <div class="sm:text-right space-y-0.5">
+              <p class="text-[10px] font-bold uppercase text-slate-400">Fecha de Generación</p>
+              <p class="font-mono font-bold text-slate-800">{{ reportGeneratedAt() }}</p>
+              <p class="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-1">
+                Tasa Oficial BCV: Bs. {{ currencyService.currentRate() | number:'1.2-2' }} / USD
+              </p>
+            </div>
+          </div>
+
+          <!-- Summary Stats Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span class="text-[10px] font-bold uppercase text-slate-500">Total Personal Activo</span>
+              <p class="text-lg font-black text-slate-900 font-mono mt-0.5">
+                {{ activeReportEmployees().length }} Empleados
+              </p>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span class="text-[10px] font-bold uppercase text-slate-500">Monto Base Mensual ($ USD)</span>
+              <p class="text-lg font-black text-blue-900 font-mono mt-0.5">
+                ${{ totalActiveSalariesUSD() | number:'1.2-2' }} USD
+              </p>
+            </div>
+
+            <div class="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200">
+              <span class="text-[10px] font-bold uppercase text-emerald-800">Equivalente Total en Bolívares</span>
+              <p class="text-lg font-black text-emerald-950 font-mono mt-0.5">
+                Bs. {{ totalActiveSalariesVES() | number:'1.2-2' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Loading Spinner -->
+          @if (isReportLoading()) {
+            <div class="p-8 text-center">
+              <div class="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p class="text-xs font-mono text-slate-500 mt-2">Generando lista de personal activo...</p>
+            </div>
+          } @else {
+            <!-- Table of Active Employees -->
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-100 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    <th class="py-2.5 px-3">#</th>
+                    <th class="py-2.5 px-3">Nombre</th>
+                    <th class="py-2.5 px-3">Teléfono de Contacto</th>
+                    <th class="py-2.5 px-3">Cargo</th>
+                    <th class="py-2.5 px-3">Departamento / Unidad Operativa</th>
+                    <th class="py-2.5 px-3 text-right">Salario Base</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (emp of activeReportEmployees(); track emp.id; let idx = $index) {
+                    <tr class="hover:bg-slate-50">
+                      <td class="py-2.5 px-3 font-mono text-slate-400 font-bold text-[11px]">{{ idx + 1 }}</td>
+                      <td class="py-2.5 px-3 font-bold text-slate-900">
+                        {{ emp.full_name }}
+                        @if (emp.personal_id) {
+                          <span class="block text-[10px] font-mono text-slate-500 font-normal">{{ emp.personal_id }}</span>
+                        }
+                      </td>
+                      <td class="py-2.5 px-3 font-mono text-slate-700">
+                        {{ emp.phone_number || emp.mobile_phone || 'Sin teléfono' }}
+                      </td>
+                      <td class="py-2.5 px-3 text-slate-800 font-medium">
+                        {{ emp.job_title }}
+                      </td>
+                      <td class="py-2.5 px-3">
+                        <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-800 rounded font-semibold text-[11px]">
+                          {{ emp.department }}
+                        </span>
+                      </td>
+                      <td class="py-2.5 px-3 text-right font-mono">
+                        <div class="font-bold text-slate-900">${{ emp.fixed_amount | number:'1.2-2' }} USD</div>
+                        <div class="text-[11px] text-emerald-700 font-bold">Bs. {{ currencyService.toVES(emp.fixed_amount) | number:'1.2-2' }}</div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="p-6 text-center text-slate-500 italic">
+                        No se encontraron empleados en estado activo en el sistema.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                  <tr>
+                    <td colspan="5" class="py-2.5 px-3 text-slate-800 text-right uppercase text-[10px]">
+                      TOTAL NÓMINA BASE PERSONAL ACTIVO:
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono">
+                      <div class="text-blue-900 font-bold">${{ totalActiveSalariesUSD() | number:'1.2-2' }} USD</div>
+                      <div class="text-emerald-950 font-black text-xs">Bs. {{ totalActiveSalariesVES() | number:'1.2-2' }}</div>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+
+          <div class="text-[10px] text-slate-400 text-center pt-2 border-t border-slate-100">
+            Documento de control interno emitido por el sistema de gestión de nómina WorkforceOS Venezuela.
+          </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+          <button
+            (click)="printReport()"
+            class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"
+          >
+            <span class="material-symbols-outlined text-base">print</span>
+            <span>Imprimir / Exportar PDF</span>
+          </button>
+          <button
+            (click)="closeActiveReportModal()"
+            class="px-3.5 py-1.5 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-100 cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+</div>
+

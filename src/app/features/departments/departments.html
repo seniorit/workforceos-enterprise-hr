@@ -1,0 +1,530 @@
+<div class="space-y-5 animate-entrance">
+  <!-- Toast Notification -->
+  @if (notification(); as note) {
+    <div 
+      [class]="note.type === 'success' 
+        ? 'bg-emerald-50 border-emerald-300 text-emerald-800' 
+        : 'bg-rose-50 border-rose-300 text-rose-800'"
+      class="p-3.5 rounded-lg border shadow-xs flex items-center justify-between gap-3 text-xs font-medium animate-entrance"
+    >
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">
+          {{ note.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        <span>{{ note.message }}</span>
+      </div>
+      <button (click)="notification.set(null)" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-blue-600 text-2xl">apartment</span>
+        <h1 class="text-lg font-bold text-slate-900 tracking-tight">Estructura de Departamentos</h1>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">
+        Gestión centralizada de áreas, líderes de equipo, presupuesto asignado y distribución de personal.
+      </p>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <button
+        (click)="openCreateModal()"
+        class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white px-4 py-2 rounded-lg font-semibold text-xs transition-all shadow-xs cursor-pointer"
+      >
+        <span class="material-symbols-outlined text-base">add_business</span>
+        <span>Nuevo Departamento</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
+      <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-xl">domain</span>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase text-slate-500 tracking-wider">Total Departamentos</p>
+        <p class="text-xl font-bold text-slate-900 mt-0.5">{{ departments().length }}</p>
+      </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
+      <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-xl">group</span>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase text-slate-500 tracking-wider">Plantilla Total</p>
+        <p class="text-xl font-bold text-slate-900 mt-0.5">{{ totalEmployeesCount() }} personal</p>
+      </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
+      <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-xl">payments</span>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase text-slate-500 tracking-wider">Presupuesto Anual</p>
+        <p class="text-xl font-bold text-slate-900 mt-0.5">${{ totalBudget() | number:'1.0-0' }}</p>
+      </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
+      <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-xl">verified</span>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase text-slate-500 tracking-wider">Departamentos Activos</p>
+        <p class="text-xl font-bold text-slate-900 mt-0.5">{{ activeDepartmentsCount() }} / {{ departments().length }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="relative w-full sm:w-80">
+      <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-sm">search</span>
+      <input
+        type="text"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar por departamento, código o líder..."
+        class="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      />
+      @if (searchTerm()) {
+        <button 
+          (click)="searchTerm.set('')" 
+          class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+        >
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      }
+    </div>
+
+    <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+      <label for="status-filter-select" class="text-xs font-semibold text-slate-600">Estado:</label>
+      <select
+        id="status-filter-select"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event)"
+        class="text-xs rounded-lg border border-slate-300 bg-white text-slate-800 px-3 py-1.5 focus:outline-hidden focus:border-blue-500"
+      >
+        <option value="all">Todos los estados</option>
+        <option value="active">Solo Activos</option>
+        <option value="inactive">Solo Inactivos</option>
+      </select>
+
+      <span class="text-xs text-slate-500 font-medium ml-2">
+        Mostrando {{ filteredDepartments().length }} de {{ departments().length }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="bg-white p-12 rounded-xl border border-slate-200 text-center space-y-3">
+      <div class="inline-block animate-spin text-blue-600">
+        <span class="material-symbols-outlined text-3xl">sync</span>
+      </div>
+      <p class="text-xs font-semibold text-slate-600">Cargando departamentos...</p>
+    </div>
+  } @else if (filteredDepartments().length === 0) {
+    <!-- Empty State -->
+    <div class="bg-white p-12 rounded-xl border border-slate-200 text-center space-y-3">
+      <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+        <span class="material-symbols-outlined text-2xl">search_off</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-800">No se encontraron departamentos</h3>
+      <p class="text-xs text-slate-500 max-w-md mx-auto">
+        No hay áreas que coincidan con la búsqueda actual o no se han creado departamentos aún.
+      </p>
+      <button
+        (click)="searchTerm.set(''); statusFilter.set('all')"
+        class="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
+      >
+        <span class="material-symbols-outlined text-sm">refresh</span>
+        <span>Restablecer filtros</span>
+      </button>
+    </div>
+  } @else {
+    <!-- Department Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (dept of filteredDepartments(); track dept.id) {
+        <div class="bg-white rounded-xl border border-slate-200 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between overflow-hidden group">
+          
+          <!-- Card Header -->
+          <div class="p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                {{ dept.code }}
+              </span>
+              <span 
+                [class]="dept.status === 'Inactivo' 
+                  ? 'bg-slate-100 text-slate-600 border-slate-200' 
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'"
+                class="text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1"
+              >
+                <span class="w-1.5 h-1.5 rounded-full" [class]="dept.status === 'Inactivo' ? 'bg-slate-400' : 'bg-emerald-500'"></span>
+                {{ dept.status || 'Activo' }}
+              </span>
+            </div>
+
+            <div>
+              <h2 class="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                {{ dept.name }}
+              </h2>
+              @if (dept.description) {
+                <p class="text-xs text-slate-500 mt-1 line-clamp-2">
+                  {{ dept.description }}
+                </p>
+              }
+            </div>
+
+            <!-- Metadata Info -->
+            <div class="space-y-1.5 pt-1 text-xs text-slate-600">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-slate-400">person_pin</span>
+                <span>Líder: <strong class="text-slate-800">{{ dept.head_of_department || 'Sin asignar' }}</strong></span>
+              </div>
+              @if (dept.location) {
+                <div class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-sm text-slate-400">location_on</span>
+                  <span>Ubicación: <span class="text-slate-700">{{ dept.location }}</span></span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Card Footer & Stats -->
+          <div>
+            <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span class="block text-[10px] uppercase font-semibold text-slate-400">Personal Asignado</span>
+                <span class="font-bold text-slate-800 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm text-blue-600">group</span>
+                  {{ getRealEmployeeCount(dept.name, dept.employee_count) }} integrantes
+                </span>
+              </div>
+              <div>
+                <span class="block text-[10px] uppercase font-semibold text-slate-400">Presupuesto</span>
+                <span class="font-bold text-slate-800 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm text-emerald-600">attach_money</span>
+                  ${{ (dept.budget || 0) | number:'1.0-0' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="p-3 bg-white border-t border-slate-100 flex items-center justify-between gap-1">
+              <button
+                (click)="openEmployeesModal(dept)"
+                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-semibold transition-colors cursor-pointer"
+                title="Ver lista de personal en este departamento"
+              >
+                <span class="material-symbols-outlined text-sm">visibility</span>
+                <span>Ver Personal</span>
+              </button>
+
+              <div class="flex items-center gap-1">
+                <button
+                  (click)="openEditModal(dept)"
+                  class="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded cursor-pointer transition-colors"
+                  title="Editar Departamento"
+                >
+                  <span class="material-symbols-outlined text-base">edit</span>
+                </button>
+                <button
+                  (click)="openDeleteModal(dept)"
+                  class="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition-colors"
+                  title="Eliminar Departamento"
+                >
+                  <span class="material-symbols-outlined text-base">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Add / Edit Department Modal -->
+  @if (isModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-entrance">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden">
+        
+        <!-- Modal Header -->
+        <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-blue-600">
+              {{ isEditing() ? 'edit_square' : 'add_business' }}
+            </span>
+            <h3 class="text-sm font-bold text-slate-900">
+              {{ isEditing() ? 'Editar Departamento' : 'Crear Nuevo Departamento' }}
+            </h3>
+          </div>
+          <button (click)="closeModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-5 space-y-3.5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label for="dept-name-field" class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Departamento *</label>
+              <input
+                id="dept-name-field"
+                type="text"
+                [ngModel]="formName()"
+                (ngModelChange)="formName.set($event)"
+                placeholder="Ej. Ciberseguridad e Infraestructura"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="dept-code-field" class="block text-xs font-semibold text-slate-700 mb-1">Código / Sigla *</label>
+              <input
+                id="dept-code-field"
+                type="text"
+                [ngModel]="formCode()"
+                (ngModelChange)="formCode.set($event)"
+                placeholder="Ej. CIBER"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 font-mono uppercase focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="dept-head-field" class="block text-xs font-semibold text-slate-700 mb-1">Líder / Gerente de Área</label>
+              <input
+                id="dept-head-field"
+                type="text"
+                [ngModel]="formHead()"
+                (ngModelChange)="formHead.set($event)"
+                placeholder="Ej. Carlos Ruiz"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="dept-location-field" class="block text-xs font-semibold text-slate-700 mb-1">Ubicación / Sede</label>
+              <input
+                id="dept-location-field"
+                type="text"
+                [ngModel]="formLocation()"
+                (ngModelChange)="formLocation.set($event)"
+                placeholder="Ej. Sede Principal - Piso 3"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="dept-budget-field" class="block text-xs font-semibold text-slate-700 mb-1">Presupuesto Anual ($)</label>
+              <input
+                id="dept-budget-field"
+                type="number"
+                [ngModel]="formBudget()"
+                (ngModelChange)="formBudget.set($event)"
+                placeholder="50000"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="dept-status-field" class="block text-xs font-semibold text-slate-700 mb-1">Estado</label>
+              <select
+                id="dept-status-field"
+                [ngModel]="formStatus()"
+                (ngModelChange)="formStatus.set($event)"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 focus:outline-hidden focus:border-blue-500"
+              >
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="dept-desc-field" class="block text-xs font-semibold text-slate-700 mb-1">Descripción y Objetivos del Área</label>
+            <textarea
+              id="dept-desc-field"
+              rows="3"
+              [ngModel]="formDescription()"
+              (ngModelChange)="formDescription.set($event)"
+              placeholder="Breve descripción del alcance operativo y responsabilidades del departamento..."
+              class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900 focus:outline-hidden focus:border-blue-500"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+          <button
+            (click)="closeModal()"
+            class="px-4 py-2 bg-white text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 hover:bg-slate-100 cursor-pointer transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="saveDepartment()"
+            class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-xs"
+          >
+            {{ isEditing() ? 'Guardar Cambios' : 'Crear Departamento' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- View Personnel Modal Drawer -->
+  @if (isEmployeesModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-entrance">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        
+        <!-- Header -->
+        <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-blue-600">badge</span>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">
+                Personal Asignado: {{ selectedDepartment()?.name }}
+              </h3>
+              <p class="text-[11px] text-slate-500">
+                Código: <strong class="font-mono text-blue-700">{{ selectedDepartment()?.code }}</strong> | 
+                Líder: <strong class="text-slate-800">{{ selectedDepartment()?.head_of_department }}</strong>
+              </p>
+            </div>
+          </div>
+          <button (click)="closeEmployeesModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <!-- Search Bar Inside Modal -->
+        <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+          <div class="relative w-full">
+            <span class="material-symbols-outlined absolute left-3 top-2 text-slate-400 text-sm">search</span>
+            <input
+              type="text"
+              [ngModel]="employeeSearchTerm()"
+              (ngModelChange)="employeeSearchTerm.set($event)"
+              placeholder="Buscar por nombre, cargo o email..."
+              class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-500"
+            />
+          </div>
+          <button
+            (click)="navigateToEmployeeList(selectedDepartment()?.name || '')"
+            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer flex items-center gap-1"
+          >
+            <span>Ver en Empleados</span>
+            <span class="material-symbols-outlined text-sm">open_in_new</span>
+          </button>
+        </div>
+
+        <!-- Body / Employee List -->
+        <div class="p-4 overflow-y-auto space-y-2 flex-1">
+          @if (isLoadingEmployees()) {
+            <div class="py-12 text-center text-slate-500 text-xs">
+              <span class="material-symbols-outlined animate-spin text-2xl text-blue-600">sync</span>
+              <p class="mt-2 font-medium">Cargando personal del departamento...</p>
+            </div>
+          } @else if (filteredDepartmentEmployees().length === 0) {
+            <div class="py-12 text-center space-y-2">
+              <span class="material-symbols-outlined text-3xl text-slate-300">group_off</span>
+              <p class="text-xs font-semibold text-slate-700">No hay empleados registrados en este departamento.</p>
+              <p class="text-[11px] text-slate-500">Puedes asignar empleados editando sus perfiles en la sección de Empleados.</p>
+            </div>
+          } @else {
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              @for (emp of filteredDepartmentEmployees(); track emp.id) {
+                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs flex items-center gap-3 hover:border-blue-400 transition-colors">
+                  <img
+                    [src]="emp.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'"
+                    [alt]="emp.full_name"
+                    class="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                    referrerpolicy="no-referrer"
+                  />
+                  <div class="min-w-0 flex-1 text-xs">
+                    <p class="font-bold text-slate-900 truncate">{{ emp.full_name }}</p>
+                    <p class="text-[11px] font-medium text-slate-500 truncate">{{ emp.job_title }}</p>
+                    <div class="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
+                      <span class="truncate">{{ emp.work_email }}</span>
+                      <span [class]="emp.status === 'Inactivo' ? 'text-rose-600' : 'text-emerald-600'" class="font-semibold">
+                        • {{ emp.status || 'Activo' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
+          <span>Total en esta vista: <strong>{{ filteredDepartmentEmployees().length }}</strong> empleados</span>
+          <button
+            (click)="closeEmployeesModal()"
+            class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-semibold cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation Modal -->
+  @if (isDeleteModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-entrance">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full p-5 space-y-4">
+        
+        <div class="flex items-center gap-3 text-rose-600">
+          <div class="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-xl">warning</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">¿Eliminar departamento?</h3>
+            <p class="text-xs text-slate-500">Esta acción no se puede deshacer.</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-1">
+          <p class="font-bold text-slate-800">{{ deleteConfirmDept()?.name }} ({{ deleteConfirmDept()?.code }})</p>
+          <p class="text-slate-600">Líder actual: {{ deleteConfirmDept()?.head_of_department }}</p>
+          @let realCount = getRealEmployeeCount(deleteConfirmDept()?.name || '', deleteConfirmDept()?.employee_count || 0);
+          @if (realCount > 0) {
+            <p class="text-amber-700 font-medium bg-amber-50 p-1.5 rounded border border-amber-200 mt-2">
+              ⚠️ Este departamento tiene <strong>{{ realCount }}</strong> empleado(s) asociado(s). Se recomienda reasignarlos antes de eliminar.
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            (click)="closeDeleteModal()"
+            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="confirmDeleteDepartment()"
+            class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg cursor-pointer shadow-xs"
+          >
+            Sí, Eliminar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+</div>
