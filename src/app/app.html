@@ -1,402 +1,98 @@
-@if (!authService.isAuthenticated() || router.url.includes('/login')) {
-  <router-outlet></router-outlet>
+@if (!auth.currentUser() || isLoginPage()) {
+  <main class="min-h-screen bg-[#0B0E14]">
+    <router-outlet></router-outlet>
+  </main>
 } @else {
-  <div class="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-    
-    <!-- Main Layout Wrapper -->
-    <div class="flex flex-1 relative">
+  <div class="min-h-screen bg-[#0B0E14] text-slate-300 flex flex-col">
+    <!-- Desktop Permanent Sidebar -->
+    <app-sidebar></app-sidebar>
 
-      <!-- Mobile Sidebar Backdrop Overlay -->
-      @if (mobileSidebarOpen()) {
-        <button
-          type="button"
-          (click)="closeSidebar()"
-          (keyup.escape)="closeSidebar()"
-          aria-label="Cerrar menú lateral"
-          class="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-xs transition-opacity w-full h-full border-0 cursor-default"
-        ></button>
-      }
-
-      <!-- Left Sidebar (High Density Dark Theme) -->
-      <aside
-        class="fixed lg:sticky top-0 left-0 h-screen w-64 bg-slate-900 border-r border-slate-800 z-50 flex flex-col justify-between transition-transform duration-200 ease-in-out flex-shrink-0"
-        [class.translate-x-0]="mobileSidebarOpen()"
-        [class.-translate-x-full]="!mobileSidebarOpen()"
-        [class.lg:translate-x-0]="true"
-      >
-        <!-- Top Brand Header -->
-        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-          <a routerLink="/" (click)="closeSidebar()" class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-500 rounded flex items-center justify-center font-bold text-white shadow-xs">
-              <span class="material-symbols-outlined text-lg">hub</span>
-            </div>
-            <div>
-              <span class="text-white font-bold tracking-tight block leading-tight text-sm">
-                Workforce<span class="text-blue-400">OS</span>
-              </span>
-              <span class="text-[10px] text-slate-400 font-mono tracking-wider block">
-                ENTERPRISE_HR
-              </span>
-            </div>
-          </a>
-
-          <button (click)="closeSidebar()" class="lg:hidden text-slate-400 hover:text-white cursor-pointer">
-            <span class="material-symbols-outlined text-lg">close</span>
-          </button>
+    <!-- Mobile Responsive Navigation Bar -->
+    <div class="lg:hidden bg-[#0F172A] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+      <div class="flex items-center gap-2">
+        <button (click)="toggleMobileMenu()" type="button" class="p-2 text-blue-400 hover:bg-white/5 rounded-lg">
+          <span class="material-symbols-outlined text-2xl">menu</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-bold text-white text-xs">W</div>
+          <span class="font-bold text-base text-white tracking-tight">WorkforceOS</span>
         </div>
-
-        <!-- Navigation Menu Links -->
-        <nav class="p-3 space-y-1 flex-1 overflow-y-auto">
-          <div class="text-[10px] uppercase font-bold text-slate-500 px-3 py-1.5 tracking-wider">
-            Módulos Principales
-          </div>
-
-          <!-- Panel de Control -->
-          <a
-            routerLink="/dashboard"
-            routerLinkActive="bg-blue-600 text-white font-semibold"
-            (click)="closeSidebar()"
-            class="flex items-center gap-2.5 px-3 py-2 rounded text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <span class="material-symbols-outlined text-lg">dashboard</span>
-            <span>Panel de Control</span>
-          </a>
-
-          <!-- Empleados -->
-          <a
-            routerLink="/employees"
-            routerLinkActive="bg-blue-600 text-white font-semibold"
-            (click)="closeSidebar()"
-            class="flex items-center gap-2.5 px-3 py-2 rounded text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <span class="material-symbols-outlined text-lg">group</span>
-            <span>Gestión Empleados</span>
-          </a>
-
-          <!-- Nómina -->
-          <a
-            routerLink="/payroll"
-            routerLinkActive="bg-blue-600 text-white font-semibold"
-            (click)="closeSidebar()"
-            class="flex items-center gap-2.5 px-3 py-2 rounded text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <span class="material-symbols-outlined text-lg">payments</span>
-            <span>Nómina y Pagos</span>
-          </a>
-
-          <!-- Asistencia -->
-          <a
-            routerLink="/attendance"
-            routerLinkActive="bg-blue-600 text-white font-semibold"
-            (click)="closeSidebar()"
-            class="flex items-center gap-2.5 px-3 py-2 rounded text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <span class="material-symbols-outlined text-lg">schedule</span>
-            <span>Asistencia</span>
-          </a>
-
-          <!-- Departamentos -->
-          <a
-            routerLink="/departments"
-            routerLinkActive="bg-blue-600 text-white font-semibold"
-            (click)="closeSidebar()"
-            class="flex items-center gap-2.5 px-3 py-2 rounded text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <span class="material-symbols-outlined text-lg">domain</span>
-            <span>Departamentos</span>
-          </a>
-
-          <div class="pt-3 text-[10px] uppercase font-bold text-slate-500 px-3 py-1.5 tracking-wider border-t border-slate-800/80">
-            Administración & Seguridad
-          </div>
-
-          <!-- Gestión de Usuarios y Permisos -->
-          <a
-            routerLink="/users"
-            routerLinkActive="bg-blue-600 text-white font-semibold"
-            (click)="closeSidebar()"
-            class="flex items-center gap-2.5 px-3 py-2 rounded text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <span class="material-symbols-outlined text-lg text-purple-400">admin_panel_settings</span>
-            <span>Usuarios y Permisos</span>
-          </a>
-        </nav>
-
-        <!-- Bottom Status & Logged In User Footer -->
-        <div class="p-3 bg-slate-950 border-t border-slate-800 space-y-2">
-          <div class="flex items-center justify-between px-2 py-1 bg-slate-900 rounded border border-slate-800">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span class="text-[11px] text-slate-300 font-mono">BACKEND_ONLINE</span>
-            </div>
-            <span class="text-[9px] font-mono text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">REST API</span>
-          </div>
-
-          <div class="flex items-center justify-between gap-2 p-1.5 rounded bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-7 h-7 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
-                {{ userInitials() }}
-              </div>
-              <div class="min-w-0">
-                <p class="text-xs font-semibold text-slate-200 truncate leading-tight">
-                  {{ authService.currentUser()?.full_name || 'Usuario' }}
-                </p>
-                <p class="text-[10px] text-blue-400 truncate">
-                  {{ userRoleLabel() }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Logout Button -->
-            <button
-              (click)="logout()"
-              class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors cursor-pointer flex-shrink-0"
-              title="Cerrar Sesión"
-            >
-              <span class="material-symbols-outlined text-lg">logout</span>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Main Content Right Area -->
-      <div class="flex-1 flex flex-col min-w-0">
-
-        <!-- Top Header App Bar -->
-        <header class="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-30">
-          
-          <div class="flex items-center gap-3 flex-1">
-            <!-- Mobile Menu Toggle Button -->
-            <button
-              (click)="toggleSidebar()"
-              class="lg:hidden p-1.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-50 cursor-pointer"
-            >
-              <span class="material-symbols-outlined text-lg">menu</span>
-            </button>
-
-            <!-- Search Bar -->
-            <div class="relative w-full max-w-md hidden sm:block">
-              <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
-              <input
-                type="text"
-                placeholder="Buscar registros, empleados, usuarios..."
-                class="w-full pl-8 pr-3 py-1.5 rounded bg-slate-50 border border-slate-300 text-xs text-slate-800 form-input-focus transition-all"
-              />
-            </div>
-          </div>
-
-          <!-- Right Quick Actions -->
-          <div class="flex items-center gap-2">
-
-            <!-- Tasa BCV del Día Badge & Quick Edit Button -->
-            <button
-              (click)="openRateModal()"
-              class="px-2.5 py-1.5 text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded border border-emerald-300 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer group"
-              title="Tasa Oficial del Dólar BCV (Click para Cargar/Actualizar)"
-            >
-              <span class="material-symbols-outlined text-base text-emerald-600 group-hover:scale-110 transition-transform">currency_exchange</span>
-              <div class="text-left flex items-baseline gap-1">
-                <span class="text-[10px] text-emerald-700 uppercase font-bold tracking-tight">Tasa BCV:</span>
-                <span class="font-mono font-bold text-xs text-emerald-900">
-                  Bs. {{ currencyService.currentRate() | number:'1.2-2' }}
-                </span>
-                <span class="text-[10px] text-emerald-600 hidden md:inline">/ USD</span>
-              </div>
-              <span class="material-symbols-outlined text-xs text-emerald-600 ml-0.5">edit</span>
-            </button>
-
-            <!-- User Management Button -->
-            <a
-              routerLink="/users"
-              class="px-2.5 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300 flex items-center gap-1.5 transition-colors hidden sm:flex"
-            >
-              <span class="material-symbols-outlined text-base text-purple-600">manage_accounts</span>
-              <span>Usuarios</span>
-            </a>
-
-            <!-- Quick Add Employee -->
-            <a
-              routerLink="/employees/new"
-              class="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-xs flex items-center gap-1.5 transition-colors"
-            >
-              <span class="material-symbols-outlined text-base">person_add</span>
-              <span>Nuevo Registro</span>
-            </a>
-
-            <div class="h-5 w-px bg-slate-200 hidden sm:block"></div>
-
-            <!-- User Badge & Logout -->
-            <div class="flex items-center gap-2">
-              <div class="w-7 h-7 rounded bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
-                {{ userInitials() }}
-              </div>
-              <div class="hidden md:block text-left">
-                <p class="text-xs font-bold text-slate-800 leading-tight">
-                  {{ authService.currentUser()?.full_name || 'Usuario' }}
-                </p>
-                <p class="text-[10px] text-slate-500 leading-none">
-                  {{ userRoleLabel() }}
-                </p>
-              </div>
-
-              <button
-                (click)="logout()"
-                class="p-1 text-slate-500 hover:text-rose-600 hover:bg-slate-100 rounded transition-colors cursor-pointer ml-1"
-                title="Cerrar Sesión"
-              >
-                <span class="material-symbols-outlined text-lg">logout</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <!-- Main Router Outlet Page Container -->
-        <main class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
-          <router-outlet></router-outlet>
-        </main>
-
-        <!-- Global Footer -->
-        <footer class="border-t border-slate-200 bg-white py-3 px-6 text-center text-xs text-slate-500">
-          <p>WorkforceOS Enterprise HR Venezuela — Tasa Oficial BCV: <strong class="text-slate-700">Bs. {{ currencyService.currentRate() | number:'1.2-2' }} / USD</strong>. Sueldos en $ USD, Pagos en Bolívares (Bs.).</p>
-        </footer>
-
       </div>
 
+      <span class="text-[10px] font-bold bg-blue-600/10 text-blue-400 border border-blue-600/20 px-2.5 py-0.5 rounded uppercase">
+        {{ auth.currentRole() }}
+      </span>
+    </div>
+
+    <!-- Mobile Drawer Overlay -->
+    @if (isMobileMenuOpen) {
+      <div class="lg:hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex">
+        <!-- Backdrop button for dismiss -->
+        <button 
+          type="button"
+          (click)="toggleMobileMenu()" 
+          class="absolute inset-0 w-full h-full cursor-default border-none bg-transparent" 
+          aria-label="Cerrar menú">
+        </button>
+
+        <div class="w-64 bg-[#0F172A] border-r border-white/10 h-full p-6 space-y-6 flex flex-col shadow-2xl relative z-10">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-blue-600 rounded flex items-center justify-center font-bold text-white text-xs">W</div>
+              <div>
+                <h2 class="font-bold text-lg text-white tracking-tight">WorkforceOS</h2>
+                <p class="text-[10px] text-slate-500 font-normal uppercase tracking-wider">v4.2.0-stable</p>
+              </div>
+            </div>
+            <button (click)="toggleMobileMenu()" type="button" class="p-1 text-slate-400 hover:text-white">
+              <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+
+          <nav class="space-y-1 flex-1">
+            <a routerLink="/dashboard" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">dashboard</span> Panel de Control
+            </a>
+            <a routerLink="/employees" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">groups</span> Empleados
+            </a>
+            <a routerLink="/payroll" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">payments</span> Nómina
+            </a>
+            <a routerLink="/attendance" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">calendar_today</span> Asistencia
+            </a>
+            <a routerLink="/reports" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">picture_as_pdf</span> Reportes PDF
+            </a>
+            <a routerLink="/settings" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">settings</span> Configuración
+            </a>
+          </nav>
+        </div>
+      </div>
+    }
+
+    <!-- Main Content View Area -->
+    <div class="lg:pl-56 flex-1 flex flex-col min-h-screen">
+      <div class="flex-1">
+        <router-outlet></router-outlet>
+      </div>
+
+      <!-- Bottom Status Bar -->
+      <footer class="h-8 bg-[#0F172A] border-t border-white/10 flex items-center justify-between px-6 text-[9px] uppercase tracking-widest text-slate-500 shrink-0">
+        <div class="flex gap-6">
+          <span>Region: us-east-1</span>
+          <span>Platform: WorkforceOS Enterprise</span>
+        </div>
+        <div class="flex gap-4">
+          <span class="text-slate-400 font-mono">Firestore-Live-Sync</span>
+          <span class="text-emerald-400 font-bold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> SYSTEM HEALTHY
+          </span>
+        </div>
+      </footer>
     </div>
   </div>
-
-  <!-- Modal Carga Manual Tasa del Dólar (BCV) -->
-  @if (rateModalOpen()) {
-    <div class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
-        
-        <!-- Modal Header -->
-        <div class="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
-          <div class="flex items-center gap-2.5">
-            <div class="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
-              <span class="material-symbols-outlined text-xl">currency_exchange</span>
-            </div>
-            <div>
-              <h2 class="text-sm font-bold leading-tight">Carga Manual Tasa del Dólar (BCV)</h2>
-              <p class="text-[11px] text-slate-400 font-mono">Actualización para Cálculos de Nómina en Bolívares</p>
-            </div>
-          </div>
-          <button
-            (click)="closeRateModal()"
-            class="text-slate-400 hover:text-white p-1 rounded transition-colors cursor-pointer"
-          >
-            <span class="material-symbols-outlined text-lg">close</span>
-          </button>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="p-5 space-y-4">
-
-          <!-- Alert / Feedback -->
-          @if (rateSuccessMsg()) {
-            <div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
-              <span class="material-symbols-outlined text-emerald-600 text-base">check_circle</span>
-              <span>{{ rateSuccessMsg() }}</span>
-            </div>
-          }
-
-          @if (rateErrorMsg()) {
-            <div class="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg flex items-center gap-2">
-              <span class="material-symbols-outlined text-rose-600 text-base">error</span>
-              <span>{{ rateErrorMsg() }}</span>
-            </div>
-          }
-
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
-            <div class="flex justify-between items-center text-xs">
-              <span class="text-slate-500 font-medium">Tasa Actual Registrada:</span>
-              <span class="font-bold text-slate-900 font-mono">Bs. {{ currencyService.currentRate() | number:'1.2-2' }} / USD</span>
-            </div>
-            <div class="flex justify-between items-center text-[11px] text-slate-500">
-              <span>Última actualización:</span>
-              <span class="font-mono">{{ currencyService.rateInfo().updated_at | date:'short' }}</span>
-            </div>
-            <div class="flex justify-between items-center text-[11px] text-slate-500">
-              <span>Registrado por:</span>
-              <span class="font-semibold text-slate-700">{{ currencyService.rateInfo().updated_by || 'Sistema' }}</span>
-            </div>
-          </div>
-
-          <!-- Rate Form Inputs -->
-          <div class="space-y-3">
-            <div>
-              <label for="bcvRateInput" class="block text-xs font-bold text-slate-700 mb-1">
-                Nueva Tasa Oficial BCV (Bs. / 1 USD) <span class="text-rose-500">*</span>
-              </label>
-              <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">Bs.</span>
-                <input
-                  id="bcvRateInput"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  [(ngModel)]="newRateInput"
-                  placeholder="36.50"
-                  class="w-full pl-9 pr-3 py-2 text-sm font-mono font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
-              </div>
-              <p class="text-[11px] text-slate-500 mt-1">
-                Todos los pagos de nómina en Bolívares se calcularán en base a este valor.
-              </p>
-            </div>
-
-            <div>
-              <label for="bcvSourceInput" class="block text-xs font-bold text-slate-700 mb-1">
-                Fuente / Ente de Referencia
-              </label>
-              <input
-                id="bcvSourceInput"
-                type="text"
-                [(ngModel)]="rateSourceInput"
-                placeholder="BCV - Banco Central de Venezuela"
-                class="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-
-          <!-- Calculated Example Preview -->
-          <div class="p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg text-xs space-y-1">
-            <span class="text-emerald-800 font-bold block text-[11px] uppercase tracking-wider">
-              Ejemplo de Conversión:
-            </span>
-            <div class="flex justify-between items-center text-emerald-900 font-mono">
-              <span>Sueldo Base: <strong>$100.00 USD</strong></span>
-              <span class="text-emerald-700 font-bold">
-                = Bs. {{ (100 * (newRateInput() || 0)) | number:'1.2-2' }}
-              </span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Modal Actions -->
-        <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-          <button
-            type="button"
-            (click)="closeRateModal()"
-            class="px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            (click)="saveRate()"
-            [disabled]="currencyService.isUpdating()"
-            class="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <span class="material-symbols-outlined text-sm">save</span>
-            <span>Guardar Tasa del Día</span>
-          </button>
-        </div>
-
-      </div>
-    </div>
-  }
 }
-
 

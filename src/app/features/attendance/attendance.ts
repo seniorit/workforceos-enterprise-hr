@@ -1,381 +1,163 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AttendanceService } from '../../core/services/attendance.service';
+import { HeaderComponent } from '../../shared/components/header/header';
+import { AuthService } from '../../core/services/auth.service';
 import { EmployeeService } from '../../core/services/employee.service';
-import { AttendanceModel, CreateAttendance } from '../../core/models/attendance.model';
-import { EmployeeModel } from '../../core/models/employee.model';
+import { AttendanceService } from '../../core/services/attendance.service';
+import { AttendanceModalComponent } from '../../shared/components/attendance-modal/attendance-modal';
+import { LeaveModalComponent, LeaveRequestData } from '../../shared/components/leave-modal/leave-modal';
+
+interface LeaveRequest {
+  id: string;
+  employeeName: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: 'Pendiente' | 'Aprobado' | 'Rechazado';
+}
 
 @Component({
   selector: 'app-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HeaderComponent, FormsModule, AttendanceModalComponent, LeaveModalComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './attendance.html',
-  styles: []
 })
-export class Attendance implements OnInit {
-  private readonly attendanceService = inject(AttendanceService);
-  private readonly employeeService = inject(EmployeeService);
+export class AttendanceComponent {
+  public auth = inject(AuthService);
+  public empService = inject(EmployeeService);
+  public attService = inject(AttendanceService);
 
-  records = signal<AttendanceModel[]>([]);
-  employees = signal<EmployeeModel[]>([]);
-  isLoading = signal<boolean>(true);
+  // Modal Controls
+  public showModal = signal<boolean>(false);
+  public showLeaveModal = signal<boolean>(false);
+  public preselectedEmpId = signal<string | null>(null);
 
-  // Search & Filter state
-  searchQuery = signal<string>('');
-  selectedStatus = signal<string>('all');
-  selectedDateFilter = signal<string>('');
+  // Notice Toast
+  public notice = signal<string | null>(null);
 
-  // Messages
-  successMessage = signal<string | null>(null);
-  errorMessage = signal<string | null>(null);
+  // Search & Filter
+  public searchTerm = signal<string>('');
+  public filterType = signal<'ALL' | 'ASISTENCIA' | 'INASISTENCIA'>('ALL');
 
-  // Modal State
-  isModalOpen = signal<boolean>(false);
-  isEditing = signal<boolean>(false);
-  editingRecordId = signal<string | null>(null);
+  // Leave Requests State
+  public leaveRequests = signal<LeaveRequest[]>([
+    {
+      id: 'leave-1',
+      employeeName: 'Alice Morgan',
+      type: 'Permiso Personal',
+      startDate: '2026-08-01',
+      endDate: '2026-08-02',
+      reason: 'Cita médica especialista',
+      status: 'Pendiente',
+    },
+    {
+      id: 'leave-2',
+      employeeName: 'Robert Tang',
+      type: 'Vacaciones',
+      startDate: '2026-08-10',
+      endDate: '2026-08-20',
+      reason: 'Período vacacional acumulado',
+      status: 'Pendiente',
+    },
+  ]);
 
-  // Form Fields
-  formEmployeeId = signal<string>('');
-  formDate = signal<string>(new Date().toISOString().substring(0, 10));
-  formRecordType = signal<'normal' | 'inasistencia' | 'justificado'>('normal');
-  
-  // Official Schedule & Tolerance
-  formExpectedCheckIn = signal<string>('08:00');
-  formExpectedCheckOut = signal<string>('17:00');
-  formToleranceMinutes = signal<number>(15);
-
-  // Actual Times
-  formActualCheckIn = signal<string>('08:00');
-  formActualCheckOut = signal<string>('17:00');
-  formNotes = signal<string>('');
-
-  // Report Modal
-  isReportModalOpen = signal<boolean>(false);
-  reportGeneratedAt = signal<string>('');
-
-  // Computed summary metrics
-  totalRecordsCount = computed(() => this.records().length);
-
-  countPresent = computed(() => {
-    return this.records().filter(r => r.status === 'Presente' || r.status === 'Present').length;
+  // Computed Metrics
+  public todayRecords = computed(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return this.attService.records().filter(r => r.date === today);
   });
 
-  countLate = computed(() => {
-    return this.records().filter(r => r.status === 'Tardanza' || r.status === 'Late').length;
+  public totalPresentToday = computed(() => {
+    return this.todayRecords().filter(r => r.type === 'ASISTENCIA').length;
   });
 
-  totalLateMinutesSum = computed(() => {
-    return this.records().reduce((sum, r) => sum + (r.late_minutes || 0), 0);
+  public totalAbsentToday = computed(() => {
+    return this.todayRecords().filter(r => r.type === 'INASISTENCIA').length;
   });
 
-  countAbsent = computed(() => {
-    return this.records().filter(r => r.status === 'Inasistente' || r.status === 'Absent').length;
+  public pendingLeavesCount = computed(() => {
+    return this.leaveRequests().filter(r => r.status === 'Pendiente').length;
   });
 
-  countJustified = computed(() => {
-    return this.records().filter(r => r.status === 'Justificado' || r.status === 'On Leave').length;
-  });
+  // Filtered Log
+  public filteredRecords = computed(() => {
+    let list = this.attService.records();
 
-  // Filtered Records
-  filteredRecords = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const status = this.selectedStatus();
-    const date = this.selectedDateFilter();
-
-    return this.records().filter(r => {
-      const matchesSearch = !query ||
-        r.employee_name.toLowerCase().includes(query) ||
-        (r.department && r.department.toLowerCase().includes(query)) ||
-        (r.notes && r.notes.toLowerCase().includes(query));
-
-      const matchesStatus = status === 'all' || r.status === status;
-      const matchesDate = !date || r.date === date;
-
-      return matchesSearch && matchesStatus && matchesDate;
-    });
-  });
-
-  // Evaluated status logic in real-time
-  evaluatedStatusInfo = computed(() => {
-    const type = this.formRecordType();
-    
-    if (type === 'inasistencia') {
-      return {
-        status: 'Inasistente',
-        lateMinutes: 0,
-        hoursWorked: 0,
-        checkInFormatted: '-',
-        checkOutFormatted: '-',
-        badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
-        description: 'Ausencia sin justificación previa registrada'
-      };
+    const type = this.filterType();
+    if (type !== 'ALL') {
+      list = list.filter(r => r.type === type);
     }
 
-    if (type === 'justificado') {
-      return {
-        status: 'Justificado',
-        lateMinutes: 0,
-        hoursWorked: 8.0,
-        checkInFormatted: 'Permiso',
-        checkOutFormatted: 'Permiso',
-        badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
-        description: 'Permiso o licencia médica justificada'
-      };
+    const q = this.searchTerm().toLowerCase().trim();
+    if (q) {
+      list = list.filter(r => 
+        r.employeeName.toLowerCase().includes(q) ||
+        (r.department && r.department.toLowerCase().includes(q)) ||
+        (r.details && r.details.toLowerCase().includes(q)) ||
+        (r.absenceReason && r.absenceReason.toLowerCase().includes(q))
+      );
     }
 
-    // Normal Marking: Calculate minutes delay against expected check in
-    const expInMin = this.timeToMinutes(this.formExpectedCheckIn());
-    const actInMin = this.timeToMinutes(this.formActualCheckIn());
-    const actOutMin = this.timeToMinutes(this.formActualCheckOut());
+    return list;
+  });
 
-    const tolerance = this.formToleranceMinutes();
-    const delay = actInMin - expInMin;
-
-    let status: 'Presente' | 'Tardanza' = 'Presente';
-    let lateMinutes = 0;
-
-    if (delay > tolerance) {
-      status = 'Tardanza';
-      lateMinutes = delay;
-    }
-
-    // Gross hours worked (less 1 hour lunch if >= 6 hours)
-    let grossHours = (actOutMin - actInMin) / 60;
-    if (grossHours >= 6) {
-      grossHours = grossHours - 1; // 1 hour lunch break
-    }
-    const hoursWorked = Math.max(0, Number(grossHours.toFixed(1)));
-
-    const inTimeFormatted = this.formatTime12h(this.formActualCheckIn());
-    const outTimeFormatted = this.formatTime12h(this.formActualCheckOut());
-
-    if (status === 'Tardanza') {
-      return {
-        status: 'Tardanza',
-        lateMinutes,
-        hoursWorked,
-        checkInFormatted: inTimeFormatted,
-        checkOutFormatted: outTimeFormatted,
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
-        description: `Llegada con ${lateMinutes} min de retraso (Excede margen de ${tolerance} min)`
-      };
+  public openRegistrationModal(employeeId?: string) {
+    if (employeeId) {
+      this.preselectedEmpId.set(employeeId);
     } else {
-      return {
-        status: 'Presente',
-        lateMinutes: 0,
-        hoursWorked,
-        checkInFormatted: inTimeFormatted,
-        checkOutFormatted: outTimeFormatted,
-        badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
-        description: delay > 0 
-          ? `Ingreso dentro de la tolerancia de ${tolerance} min (${delay} min)`
-          : `Llegada puntual o anticipada`
-      };
+      this.preselectedEmpId.set(null);
     }
-  });
-
-  ngOnInit(): void {
-    this.loadData();
+    this.showModal.set(true);
   }
 
-  loadData(): void {
-    this.isLoading.set(true);
-    
-    // Load attendance records
-    this.attendanceService.getAttendance().subscribe({
-      next: (data) => {
-        this.records.set(data);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error loading attendance records', err);
-        this.isLoading.set(false);
-      }
-    });
-
-    // Load employees for selection dropdown
-    this.employeeService.getEmployees({}).subscribe({
-      next: (emps) => {
-        this.employees.set(emps);
-      },
-      error: (err) => console.error('Error loading employees for attendance dropdown', err)
-    });
+  public closeModal() {
+    this.showModal.set(false);
   }
 
-  openRegisterModal(): void {
-    this.isEditing.set(false);
-    this.editingRecordId.set(null);
+  public onRecordAdded(msg: string) {
+    this.notice.set(msg);
+    setTimeout(() => this.notice.set(null), 6000);
+  }
 
-    // Preselect first employee if available
-    if (this.employees().length > 0) {
-      this.formEmployeeId.set(this.employees()[0].id);
+  public async deleteRecord(id: string) {
+    if (confirm('¿Desea eliminar este registro de asistencia/inasistencia?')) {
+      await this.attService.deleteRecord(id);
+      this.notice.set('Registro eliminado correctamente.');
+      setTimeout(() => this.notice.set(null), 4000);
     }
-    
-    this.formDate.set(new Date().toISOString().substring(0, 10));
-    this.formRecordType.set('normal');
-    this.formExpectedCheckIn.set('08:00');
-    this.formExpectedCheckOut.set('17:00');
-    this.formToleranceMinutes.set(15);
-    this.formActualCheckIn.set('08:00');
-    this.formActualCheckOut.set('17:00');
-    this.formNotes.set('');
-
-    this.isModalOpen.set(true);
   }
 
-  openEditModal(record: AttendanceModel): void {
-    this.isEditing.set(true);
-    this.editingRecordId.set(record.id);
-
-    this.formEmployeeId.set(record.employee_id);
-    this.formDate.set(record.date);
-
-    if (record.status === 'Inasistente') {
-      this.formRecordType.set('inasistencia');
-    } else if (record.status === 'Justificado') {
-      this.formRecordType.set('justificado');
-    } else {
-      this.formRecordType.set('normal');
-    }
-
-    this.formExpectedCheckIn.set(this.time24h(record.expected_check_in || '08:00 AM'));
-    this.formExpectedCheckOut.set(this.time24h(record.expected_check_out || '05:00 PM'));
-    this.formToleranceMinutes.set(15);
-    this.formActualCheckIn.set(this.time24h(record.check_in));
-    this.formActualCheckOut.set(this.time24h(record.check_out));
-    this.formNotes.set(record.notes || '');
-
-    this.isModalOpen.set(true);
+  public updateLeaveStatus(id: string, newStatus: 'Aprobado' | 'Rechazado') {
+    this.leaveRequests.update(list => 
+      list.map(r => r.id === id ? { ...r, status: newStatus } : r)
+    );
+    this.notice.set(`Solicitud de permiso ${newStatus.toLowerCase()} exitosamente.`);
+    setTimeout(() => this.notice.set(null), 5000);
   }
 
-  closeModal(): void {
-    this.isModalOpen.set(false);
+  public openLeaveModal() {
+    this.showLeaveModal.set(true);
   }
 
-  saveAttendanceRecord(): void {
-    const emp = this.employees().find(e => e.id === this.formEmployeeId());
-    const empName = emp ? emp.full_name : 'Empleado Desconocido';
-    const dept = emp ? emp.department : 'General';
+  public closeLeaveModal() {
+    this.showLeaveModal.set(false);
+  }
 
-    const evalInfo = this.evaluatedStatusInfo();
-
-    const payload: CreateAttendance = {
-      employee_id: this.formEmployeeId(),
-      employee_name: empName,
-      department: dept,
-      date: this.formDate(),
-      expected_check_in: this.formatTime12h(this.formExpectedCheckIn()),
-      expected_check_out: this.formatTime12h(this.formExpectedCheckOut()),
-      check_in: evalInfo.checkInFormatted,
-      check_out: evalInfo.checkOutFormatted,
-      status: evalInfo.status,
-      hours_worked: evalInfo.hoursWorked,
-      late_minutes: evalInfo.lateMinutes,
-      notes: this.formNotes()
+  public onLeaveRequestCreated(data: LeaveRequestData) {
+    const newReq: LeaveRequest = {
+      id: `leave-${Date.now()}`,
+      employeeName: data.employeeName,
+      type: data.type,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      reason: data.reason,
+      status: 'Pendiente',
     };
 
-    if (this.isEditing() && this.editingRecordId()) {
-      this.attendanceService.updateAttendance(this.editingRecordId()!, { ...payload, id: this.editingRecordId()! }).subscribe({
-        next: () => {
-          this.successMessage.set(`Marcaje actualizado para ${empName}. Estado: ${evalInfo.status}`);
-          this.closeModal();
-          this.loadData();
-          setTimeout(() => this.successMessage.set(null), 4000);
-        },
-        error: (err) => {
-          console.error('Error updating attendance', err);
-          this.errorMessage.set('Error al actualizar registro de asistencia.');
-        }
-      });
-    } else {
-      this.attendanceService.createAttendance(payload).subscribe({
-        next: () => {
-          this.successMessage.set(`Marcaje registrado para ${empName}. Estado: ${evalInfo.status}`);
-          this.closeModal();
-          this.loadData();
-          setTimeout(() => this.successMessage.set(null), 4000);
-        },
-        error: (err) => {
-          console.error('Error creating attendance', err);
-          this.errorMessage.set('Error al registrar la asistencia.');
-        }
-      });
-    }
-  }
-
-  deleteRecord(id: string): void {
-    if (!confirm('¿Está seguro de eliminar este registro de asistencia?')) return;
-
-    this.attendanceService.deleteAttendance(id).subscribe({
-      next: () => {
-        this.successMessage.set('Registro de asistencia eliminado exitosamente.');
-        this.loadData();
-        setTimeout(() => this.successMessage.set(null), 4000);
-      },
-      error: (err) => {
-        console.error('Error deleting attendance', err);
-        this.errorMessage.set('Error al eliminar el registro.');
-      }
-    });
-  }
-
-  openReportModal(): void {
-    this.reportGeneratedAt.set(new Date().toLocaleString('es-VE'));
-    this.isReportModalOpen.set(true);
-  }
-
-  closeReportModal(): void {
-    this.isReportModalOpen.set(false);
-  }
-
-  printReport(): void {
-    window.print();
-  }
-
-  // --- Helper Functions ---
-  private timeToMinutes(timeStr: string): number {
-    if (!timeStr || timeStr === '-') return 0;
-    // Format can be "08:30", "17:00", or "08:30 AM"
-    const cleaned = timeStr.trim();
-    if (cleaned.includes('AM') || cleaned.includes('PM')) {
-      const parts = cleaned.split(' ');
-      const [h, m] = parts[0].split(':').map(Number);
-      let hours = h;
-      if (parts[1] === 'PM' && hours < 12) hours += 12;
-      if (parts[1] === 'AM' && hours === 12) hours = 0;
-      return hours * 60 + (m || 0);
-    } else {
-      const [h, m] = cleaned.split(':').map(Number);
-      return (h || 0) * 60 + (m || 0);
-    }
-  }
-
-  private time24h(time12hOr24h: string): string {
-    if (!time12hOr24h || time12hOr24h === '-') return '08:00';
-    if (!time12hOr24h.includes('AM') && !time12hOr24h.includes('PM')) {
-      return time12hOr24h;
-    }
-    const parts = time12hOr24h.trim().split(' ');
-    const [h, m] = parts[0].split(':').map(Number);
-    let hours = h;
-    if (parts[1] === 'PM' && hours < 12) hours += 12;
-    if (parts[1] === 'AM' && hours === 12) hours = 0;
-    const hh = hours.toString().padStart(2, '0');
-    const mm = (m || 0).toString().padStart(2, '0');
-    return `${hh}:${mm}`;
-  }
-
-  private formatTime12h(time24h: string): string {
-    if (!time24h || time24h === '-') return '-';
-    const [h, m] = time24h.split(':').map(Number);
-    if (isNaN(h)) return time24h;
-    const period = h >= 12 ? 'PM' : 'AM';
-    let hours12 = h % 12;
-    if (hours12 === 0) hours12 = 12;
-    const hh = hours12.toString().padStart(2, '0');
-    const mm = (m || 0).toString().padStart(2, '0');
-    return `${hh}:${mm} ${period}`;
+    this.leaveRequests.update(list => [newReq, ...list]);
+    this.notice.set(`Solicitud de ${data.type} creada exitosamente para ${data.employeeName}. Pendiente por aprobación.`);
+    setTimeout(() => this.notice.set(null), 6000);
   }
 }
-

@@ -1,0 +1,307 @@
+@if (isOpen() && employee()) {
+  @let emp = employee()!;
+
+  <div class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
+    <div class="bg-[#151921] w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 space-y-5 shadow-2xl border border-white/10 max-h-[92vh] overflow-y-auto text-slate-200 animate-entrance">
+      
+      <!-- Modal Header (Mobile Friendly) -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-purple-500/10 border border-purple-500/30 rounded-xl flex items-center justify-center text-purple-400 shrink-0">
+            <span class="material-symbols-outlined text-2xl">phonelink_ring</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="font-bold text-base text-white tracking-tight">Emisión de Pago Móvil</h2>
+              <span class="text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                Bs. {{ exchangeService.bcvRate() }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">Dispersión inmediata en Bolívares (VES)</p>
+          </div>
+        </div>
+        <button 
+          (click)="onClose()" 
+          type="button" 
+          class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <!-- SUCCESS STEP -->
+      @if (showSuccessStep() && lastTransaction()) {
+        @let tx = lastTransaction()!;
+        <div class="space-y-5 text-center py-2 animate-entrance">
+          <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl">
+            <span class="material-symbols-outlined text-4xl">check_circle</span>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-bold text-white">¡Pago Móvil Procesado!</h3>
+            <p class="text-xs text-slate-400 mt-1">Comprobante de dispersión en Bolívares emitido exitosamente.</p>
+          </div>
+
+          <!-- Transaction Receipt Card -->
+          <div class="bg-[#0B0E14] border border-white/10 rounded-xl p-4 text-left space-y-3 font-sans">
+            <div class="flex justify-between items-center pb-2 border-b border-white/10">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Monto Acreditado (Bs.)</span>
+              <span class="text-base font-bold font-mono text-amber-300">{{ exchangeService.formatBs(tx.amountBs) }}</span>
+            </div>
+
+            <div class="space-y-1.5 text-xs text-slate-300">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Beneficiario:</span>
+                <strong class="text-white">{{ tx.recipientName }}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Nº de Referencia:</span>
+                <strong class="text-amber-300 font-mono font-bold">{{ tx.referenceNumber }}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Banco Destino:</span>
+                <strong class="text-purple-300 font-mono">{{ tx.bankCode }} - {{ tx.bankName }}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Teléfono:</span>
+                <strong class="text-white font-mono">{{ tx.phone }}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Cédula / RIF:</span>
+                <strong class="text-white font-mono">{{ tx.personalId }}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Equivalente USD:</span>
+                <strong class="text-blue-400 font-mono">{{ exchangeService.formatUsd(tx.amountUsd) }}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Tasa BCV Aplicada:</span>
+                <strong class="text-amber-400 font-mono">Bs. {{ tx.bcvRate }}</strong>
+              </div>
+              @if (tx.isTemporary) {
+                <div class="pt-2 border-t border-white/10 text-[10px] text-amber-400/90 italic flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs">info</span>
+                  <span>Procesado con datos temporales de la transacción</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <button 
+            type="button"
+            (click)="onClose()"
+            class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-[0.98]">
+            Aceptar y Cerrar
+          </button>
+        </div>
+      } @else {
+
+        <!-- FORM STEP -->
+        <form (ngSubmit)="onSubmitPayment()" class="space-y-4">
+
+          <!-- Employee Header Banner -->
+          <div class="bg-[#0B0E14] border border-white/10 rounded-xl p-3.5 flex items-center gap-3">
+            <img 
+              [src]="emp.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'" 
+              [alt]="emp.fullName" 
+              class="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0">
+            <div class="min-w-0 flex-1">
+              <p class="font-bold text-white text-xs truncate">{{ emp.fullName }}</p>
+              <p class="text-[10px] text-slate-400 font-mono">{{ emp.position }} | {{ emp.personalId || 'V-00000000' }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[10px] text-blue-400 font-mono font-bold">{{ emp.fixedSalary || '$ 0.00' }}</span>
+                <span class="text-[10px] text-slate-500">•</span>
+                <span class="text-[10px] text-amber-300 font-mono font-bold">{{ exchangeService.formatBs(amountBs()) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Mode Selector (Registered vs Temporary Manual) -->
+          <div class="bg-[#0B0E14] p-1 rounded-xl border border-white/10 grid grid-cols-2 gap-1 text-xs font-semibold">
+            <button 
+              type="button" 
+              (click)="toggleTemporaryMode(false)"
+              [class.bg-purple-600]="!isTemporary()"
+              [class.text-white]="!isTemporary()"
+              [class.text-slate-400]="isTemporary()"
+              class="py-2.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 min-h-[44px]">
+              <span class="material-symbols-outlined text-base">verified</span>
+              <span>Datos Registrados</span>
+            </button>
+
+            <button 
+              type="button" 
+              (click)="toggleTemporaryMode(true)"
+              [class.bg-amber-600]="isTemporary()"
+              [class.text-white]="isTemporary()"
+              [class.text-slate-400]="!isTemporary()"
+              class="py-2.5 px-2 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 min-h-[44px]">
+              <span class="material-symbols-outlined text-base">edit_note</span>
+              <span>Datos Temporales</span>
+            </button>
+          </div>
+
+          @if (isTemporary()) {
+            <div class="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg text-[11px] flex items-center gap-2">
+              <span class="material-symbols-outlined text-base shrink-0">info</span>
+              <span>Estás ingresando datos temporales para esta transacción. No modificarán la ficha del empleado.</span>
+            </div>
+          }
+
+          <!-- Pago Móvil Fields Grid -->
+          <div class="bg-[#0B0E14] border border-white/10 rounded-xl p-4 space-y-3.5">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-purple-400 text-base">account_balance</span>
+                <span>Detalle de Destino Pago Móvil</span>
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">Cód: {{ bankCode() }}</span>
+            </h3>
+
+            <!-- Banco Destino -->
+            <div>
+              <label for="pmBankSelect" class="block text-[11px] font-semibold text-slate-400 mb-1">Banco Receptor</label>
+              <select 
+                id="pmBankSelect"
+                [ngModel]="bankCode()" 
+                (ngModelChange)="bankCode.set($event)"
+                name="pmBankCode"
+                [disabled]="!isTemporary()"
+                class="w-full px-3 py-2.5 bg-[#151921] border border-white/15 rounded-lg text-xs font-medium text-white focus:outline-none focus:border-purple-500 disabled:opacity-75 disabled:cursor-not-allowed">
+                @for (b of bankList; track b.code) {
+                  <option [value]="b.code" class="bg-[#0F172A] text-slate-200">
+                    {{ b.code }} - {{ b.name }} ({{ b.type }})
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Teléfono -->
+              <div>
+                <label for="pmPhoneInput" class="block text-[11px] font-semibold text-slate-400 mb-1">Número de Teléfono</label>
+                <input 
+                  id="pmPhoneInput"
+                  type="text" 
+                  [ngModel]="phone()" 
+                  (ngModelChange)="phone.set($event)"
+                  name="pmPhone"
+                  placeholder="0412-0000000"
+                  [readonly]="!isTemporary()"
+                  class="w-full px-3 py-2.5 bg-[#151921] border border-white/15 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-purple-500 readonly:opacity-75">
+              </div>
+
+              <!-- Cédula / RIF -->
+              <div>
+                <label for="pmIdInput" class="block text-[11px] font-semibold text-slate-400 mb-1">Cédula / RIF Titular</label>
+                <input 
+                  id="pmIdInput"
+                  type="text" 
+                  [ngModel]="personalId()" 
+                  (ngModelChange)="personalId.set($event)"
+                  name="pmPersonalId"
+                  placeholder="V-12345678"
+                  [readonly]="!isTemporary()"
+                  class="w-full px-3 py-2.5 bg-[#151921] border border-white/15 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-purple-500 readonly:opacity-75">
+              </div>
+            </div>
+
+            <!-- Nombre Titular Destino -->
+            <div>
+              <label for="pmRecipientInput" class="block text-[11px] font-semibold text-slate-400 mb-1">Nombre Completo del Titular</label>
+              <input 
+                id="pmRecipientInput"
+                type="text" 
+                [ngModel]="recipientName()" 
+                (ngModelChange)="recipientName.set($event)"
+                name="pmRecipientName"
+                placeholder="Nombre del titular en banco..."
+                [readonly]="!isTemporary()"
+                class="w-full px-3 py-2.5 bg-[#151921] border border-white/15 rounded-lg text-xs font-medium text-white focus:outline-none focus:border-purple-500 readonly:opacity-75">
+            </div>
+
+            <!-- Número de Referencia de Pago Móvil -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="pmRefNumberInput" class="block text-[11px] font-semibold text-slate-400">
+                  Número de Referencia de Pago Móvil
+                </label>
+                <button 
+                  type="button" 
+                  (click)="referenceNumber.set(generateRandomReference())"
+                  title="Generar número de referencia de banco"
+                  class="text-[10px] text-purple-300 hover:text-purple-200 font-mono font-semibold underline flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs">autorenew</span>
+                  <span>Autogenerar Nº</span>
+                </button>
+              </div>
+              <input 
+                id="pmRefNumberInput"
+                type="text" 
+                [ngModel]="referenceNumber()" 
+                (ngModelChange)="referenceNumber.set($event)"
+                name="pmReferenceNumber"
+                placeholder="Ej. 00849201"
+                class="w-full px-3 py-2.5 bg-[#151921] border border-purple-500/30 rounded-lg text-xs font-mono font-bold text-amber-300 focus:outline-none focus:border-purple-500">
+            </div>
+
+            <!-- Concepto de Pago -->
+            <div>
+              <label for="pmNoteInput" class="block text-[11px] font-semibold text-slate-400 mb-1">Concepto / Nota de Transferencia</label>
+              <input 
+                id="pmNoteInput"
+                type="text" 
+                [ngModel]="referenceNote()" 
+                (ngModelChange)="referenceNote.set($event)"
+                name="pmReferenceNote"
+                placeholder="Ej. Pago de nómina..."
+                class="w-full px-3 py-2 bg-[#151921] border border-white/15 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+            </div>
+          </div>
+
+          <!-- Total Verification Card -->
+          <div class="bg-gradient-to-r from-purple-950/60 to-blue-950/60 border border-purple-500/30 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">Total a Dispersar (Bs.)</span>
+              <span class="text-xl font-bold font-mono text-amber-300 block">
+                {{ exchangeService.formatBs(amountBs()) }}
+              </span>
+              <span class="text-[10px] font-mono text-slate-400 block">
+                Tasa BCV: Bs. {{ exchangeService.bcvRate() }} / USD
+              </span>
+            </div>
+
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 block">Monto Base USD</span>
+              <span class="text-sm font-bold font-mono text-blue-400">{{ exchangeService.formatUsd(amountUsd()) }}</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons (Mobile Touch Friendly) -->
+          <div class="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
+            <button 
+              type="button" 
+              (click)="onClose()"
+              class="w-full sm:w-1/3 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-xs font-bold transition-colors min-h-[44px]">
+              Cancelar
+            </button>
+
+            <button 
+              type="submit" 
+              [disabled]="isProcessing()"
+              class="w-full sm:w-2/3 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-[0.98]">
+              @if (isProcessing()) {
+                <span class="material-symbols-outlined text-base animate-spin">refresh</span>
+                <span>Procesando Pago Móvil...</span>
+              } @else {
+                <span class="material-symbols-outlined text-base">send</span>
+                <span>Confirmar Pago Móvil en Bs.</span>
+              }
+            </button>
+          </div>
+
+        </form>
+      }
+
+    </div>
+  </div>
+}

@@ -6,7 +6,7 @@
     "schematicCollections": [
       "angular-eslint"
     ],
-    "analytics": "657935d4-2d59-4934-a28c-22b31d65e1ab"
+    "analytics": "2238a183-d292-4d09-97ed-8e6f4877c1ae"
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -51,7 +51,8 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,

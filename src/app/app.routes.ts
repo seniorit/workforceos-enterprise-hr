@@ -1,59 +1,53 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
+import { authGuard, noAuthGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  {
-    path: '',
-    redirectTo: 'dashboard',
-    pathMatch: 'full'
-  },
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
   {
     path: 'login',
-    loadComponent: () => import('./features/login/login').then(m => m.Login)
+    canActivate: [noAuthGuard],
+    loadComponent: () => import('./features/login/login').then(m => m.LoginComponent),
   },
   {
     path: 'dashboard',
-    loadComponent: () => import('./features/dashboard/dashboard').then(m => m.Dashboard),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/dashboard/dashboard').then(m => m.DashboardComponent),
   },
   {
     path: 'employees',
-    loadComponent: () => import('./features/employees/employee-list').then(m => m.EmployeeList),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/employees/employee-list/employee-list').then(m => m.EmployeeListComponent),
   },
   {
     path: 'employees/new',
-    loadComponent: () => import('./features/employees/employee-form').then(m => m.EmployeeForm),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/employees/employee-form/employee-form').then(m => m.EmployeeFormComponent),
   },
   {
     path: 'employees/edit/:id',
-    loadComponent: () => import('./features/employees/employee-form').then(m => m.EmployeeForm),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/employees/employee-form/employee-form').then(m => m.EmployeeFormComponent),
   },
   {
     path: 'payroll',
-    loadComponent: () => import('./features/payroll/payroll').then(m => m.Payroll),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/payroll/payroll').then(m => m.PayrollComponent),
   },
   {
     path: 'attendance',
-    loadComponent: () => import('./features/attendance/attendance').then(m => m.Attendance),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/attendance/attendance').then(m => m.AttendanceComponent),
   },
   {
-    path: 'departments',
-    loadComponent: () => import('./features/departments/departments').then(m => m.Departments),
-    canActivate: [authGuard]
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/settings/settings').then(m => m.SettingsComponent),
   },
   {
-    path: 'users',
-    loadComponent: () => import('./features/users/user-management').then(m => m.UserManagement),
-    canActivate: [authGuard]
+    path: 'reports',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/reports/reports').then(m => m.ReportsComponent),
   },
-  {
-    path: '**',
-    redirectTo: 'dashboard'
-  }
+  { path: '**', redirectTo: 'dashboard' },
 ];
 

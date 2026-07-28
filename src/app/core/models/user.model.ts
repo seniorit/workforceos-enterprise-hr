@@ -1,102 +1,51 @@
-export type UserRole = 'ADMIN' | 'HR_MANAGER' | 'PAYROLL_ADMIN' | 'SUPERVISOR';
+export type UserRole = 'admin' | 'hr' | 'standard';
 
-export type UserPermission =
-  | 'employees:read'
-  | 'employees:write'
-  | 'payroll:read'
-  | 'payroll:write'
-  | 'attendance:read'
-  | 'attendance:write'
-  | 'departments:read'
-  | 'departments:write'
-  | 'users:manage';
-
-export interface SystemUser {
-  id: string;
-  full_name: string;
+export interface UserProfile {
+  uid: string;
   email: string;
+  displayName: string;
+  photoURL?: string;
   role: UserRole;
-  department: string;
-  status: 'Active' | 'Inactive';
-  permissions: UserPermission[];
-  last_login?: string;
-  photo_url?: string;
-  created_at?: string;
+  department?: string;
+  title?: string;
+  bio?: string;
+  phone?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
 }
 
-export interface LoginResponse {
-  token: string;
-  user: SystemUser;
+export interface RolePermissions {
+  canCreateEmployee: boolean;
+  canEditEmployee: boolean;
+  canDeleteEmployee: boolean;
+  canManagePayroll: boolean;
+  canManageRoles: boolean;
+  canApproveTimeOff: boolean;
 }
 
-export interface RoleOption {
-  value: UserRole;
-  label: string;
-  description: string;
-  defaultPermissions: UserPermission[];
-}
-
-export const ROLE_OPTIONS: RoleOption[] = [
-  {
-    value: 'ADMIN',
-    label: 'Administrador General',
-    description: 'Acceso total a todos los módulos y gestión de seguridad y usuarios.',
-    defaultPermissions: [
-      'employees:read',
-      'employees:write',
-      'payroll:read',
-      'payroll:write',
-      'attendance:read',
-      'attendance:write',
-      'departments:read',
-      'departments:write',
-      'users:manage'
-    ]
+export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  admin: {
+    canCreateEmployee: true,
+    canEditEmployee: true,
+    canDeleteEmployee: true,
+    canManagePayroll: true,
+    canManageRoles: true,
+    canApproveTimeOff: true,
   },
-  {
-    value: 'HR_MANAGER',
-    label: 'Gerente de Recursos Humanos',
-    description: 'Gestión completa de personal, asistencias y estructura de departamentos.',
-    defaultPermissions: [
-      'employees:read',
-      'employees:write',
-      'attendance:read',
-      'attendance:write',
-      'departments:read'
-    ]
+  hr: {
+    canCreateEmployee: true,
+    canEditEmployee: true,
+    canDeleteEmployee: false,
+    canManagePayroll: true,
+    canManageRoles: false,
+    canApproveTimeOff: true,
   },
-  {
-    value: 'PAYROLL_ADMIN',
-    label: 'Administrador de Nómina',
-    description: 'Gestión y cálculo de salarios, pagos y deducciones.',
-    defaultPermissions: [
-      'payroll:read',
-      'payroll:write',
-      'employees:read',
-      'attendance:read'
-    ]
+  standard: {
+    canCreateEmployee: false,
+    canEditEmployee: false,
+    canDeleteEmployee: false,
+    canManagePayroll: false,
+    canManageRoles: false,
+    canApproveTimeOff: false,
   },
-  {
-    value: 'SUPERVISOR',
-    label: 'Supervisor / Auditor',
-    description: 'Acceso de sólo lectura para monitoreo de reportes y asistencias.',
-    defaultPermissions: [
-      'employees:read',
-      'payroll:read',
-      'attendance:read',
-      'departments:read'
-    ]
-  }
-];
-
-export const ALL_PERMISSIONS: { key: UserPermission; label: string; group: string }[] = [
-  { key: 'employees:read', label: 'Ver Expedientes de Empleados', group: 'Empleados' },
-  { key: 'employees:write', label: 'Crear / Editar / Eliminar Empleados', group: 'Empleados' },
-  { key: 'payroll:read', label: 'Consultar Reportes de Nómina', group: 'Nómina' },
-  { key: 'payroll:write', label: 'Procesar y Aprobar Pagos', group: 'Nómina' },
-  { key: 'attendance:read', label: 'Ver Control de Asistencia', group: 'Asistencia' },
-  { key: 'attendance:write', label: 'Modificar Marcajes y Permisos', group: 'Asistencia' },
-  { key: 'departments:read', label: 'Ver Estructura Organizativa', group: 'Departamentos' },
-  { key: 'departments:write', label: 'Crear / Modificar Departamentos', group: 'Departamentos' },
-  { key: 'users:manage', label: 'Gestionar Usuarios y Permisos del Sistema', group: 'Seguridad' }
-];
+};

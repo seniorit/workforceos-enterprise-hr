@@ -1,6 +1,8 @@
 {
-  "name": "WorkforceOS Enterprise HR",
-  "description": "Sistema de gestión de recursos humanos empresarial para administración de empleados, nómina, asistencia y paneles de control.",
+  "name": "Remix WorkforceOS - Enterprise HR",
+  "description": "Enterprise HR Management platform with Google Authentication, Firestore realtime storage, and role-based access control.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

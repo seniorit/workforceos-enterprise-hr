@@ -1,35 +1,35 @@
-export interface AttendanceModel {
+export type AttendanceRecordType = 'ASISTENCIA' | 'INASISTENCIA';
+
+export type AttendanceCondition = 'Puntual' | 'Retraso' | 'Remoto' | 'Turno Rotativo' | 'Horas Extra';
+
+export type AbsenceReason = 
+  | 'Reposo Médico / Incapacidad'
+  | 'Permiso Personal'
+  | 'Inasistencia Injustificada'
+  | 'Vacaciones'
+  | 'Licencia por Duelo / Maternidad'
+  | 'Comisión de Servicio / Trabajo de Campo'
+  | 'Otro Motivo';
+
+export interface AttendanceRecord {
   id: string;
-  employee_id: string;
-  employee_name: string;
+  employeeId: string;
+  employeeName: string;
+  employeePhoto?: string;
   department?: string;
-  date: string;
-  expected_check_in?: string;
-  expected_check_out?: string;
-  check_in: string;
-  check_out: string;
-  status: 'Presente' | 'Tardanza' | 'Inasistente' | 'Justificado' | string;
-  hours_worked: number;
-  late_minutes?: number;
-  notes?: string;
+  date: string; // YYYY-MM-DD
+  type: AttendanceRecordType;
+  
+  // Attendance Fields
+  checkInTime?: string; // e.g. "08:00 AM"
+  checkOutTime?: string; // e.g. "05:00 PM"
+  condition?: AttendanceCondition;
+  
+  // Absence Fields
+  absenceReason?: AbsenceReason;
+  isJustified?: boolean; // Justificada / No Justificada
+  details?: string; // Observaciones y detalles explicativos
+  
+  loggedBy?: string; // Registered by (e.g. Admin / Supervisor)
+  createdAt: string;
 }
-
-export interface CreateAttendance {
-  employee_id: string;
-  employee_name: string;
-  department?: string;
-  date: string;
-  expected_check_in?: string;
-  expected_check_out?: string;
-  check_in: string;
-  check_out: string;
-  status: 'Presente' | 'Tardanza' | 'Inasistente' | 'Justificado' | string;
-  hours_worked: number;
-  late_minutes?: number;
-  notes?: string;
-}
-
-export interface UpdateAttendance extends CreateAttendance {
-  id: string;
-}
-
