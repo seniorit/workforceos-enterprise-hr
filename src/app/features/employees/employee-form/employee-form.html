@@ -1,0 +1,478 @@
+<app-header backUrl="/employees" backLabel="Volver al Directorio"></app-header>
+
+<main class="p-6 md:p-8 space-y-6 animate-entrance max-w-7xl mx-auto">
+  <!-- Toast Success Notification -->
+  @if (showSuccessToast()) {
+    <div class="p-4 bg-emerald-950/80 border border-emerald-500/30 text-white rounded-xl shadow-lg flex items-center gap-3">
+      <span class="material-symbols-outlined text-2xl text-emerald-400">check_circle</span>
+      <div>
+        <p class="font-bold text-xs">Empleado Guardado Correctamente</p>
+        <p class="text-[11px] text-slate-300">Información sincronizada en Firestore en tiempo real. Redirigiendo...</p>
+      </div>
+    </div>
+  }
+
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-white tracking-tight">
+        {{ isEditMode() ? 'Editar Expediente de Empleado' : 'Agregar Nuevo Empleado' }}
+      </h1>
+      <p class="text-xs text-slate-400 mt-0.5">
+        Completa todos los campos obligatorios para registrar al colaborador en la plataforma de WorkforceOS
+      </p>
+    </div>
+  </div>
+
+  <!-- Form Grid (2 Columns: 2/3 Left, 1/3 Right) -->
+  <form [formGroup]="employeeForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column (Form Sections) -->
+    <div class="lg:col-span-2 space-y-6">
+      
+      <!-- Section 1: Información Personal -->
+      <section class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 border-b border-white/10 pb-2.5 text-blue-400">
+          <span class="material-symbols-outlined text-lg">person</span>
+          <h2 class="font-semibold text-sm text-white">Información Personal</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Nombre Completo -->
+          <div class="md:col-span-2 space-y-1">
+            <label for="fullName" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Nombre Completo <span class="text-red-400">*</span></label>
+            <input 
+              id="fullName"
+              type="text" 
+              formControlName="fullName"
+              placeholder="Ej. Alex Rivera" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+            @if (employeeForm.get('fullName')?.touched && employeeForm.get('fullName')?.invalid) {
+              <p class="text-[10px] font-bold text-red-400">El nombre completo es obligatorio (mínimo 3 caracteres).</p>
+            }
+          </div>
+
+          <!-- Fecha de Nacimiento -->
+          <div class="space-y-1">
+            <label for="dob" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Fecha de Nacimiento</label>
+            <input 
+              id="dob"
+              type="date" 
+              formControlName="dob"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <!-- Género -->
+          <div class="space-y-1">
+            <label for="gender" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Género</label>
+            <select 
+              id="gender"
+              formControlName="gender"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="Masculino" class="bg-[#0F172A] text-slate-200">Masculino</option>
+              <option value="Femenino" class="bg-[#0F172A] text-slate-200">Femenino</option>
+              <option value="Otro" class="bg-[#0F172A] text-slate-200">Otro</option>
+              <option value="Prefiero no decir" class="bg-[#0F172A] text-slate-200">Prefiero no decir</option>
+            </select>
+          </div>
+
+          <!-- ID Personal -->
+          <div class="space-y-1">
+            <label for="personalId" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ID Personal / Cédula <span class="text-red-400">*</span></label>
+            <input 
+              id="personalId"
+              type="text" 
+              formControlName="personalId"
+              placeholder="Ej. V-20123456" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+            @if (employeeForm.get('personalId')?.touched && employeeForm.get('personalId')?.invalid) {
+              <p class="text-[10px] font-bold text-red-400">El ID personal es obligatorio.</p>
+            }
+          </div>
+
+          <!-- ID Fiscal -->
+          <div class="space-y-1">
+            <label for="taxId" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ID Fiscal / RIF</label>
+            <input 
+              id="taxId"
+              type="text" 
+              formControlName="taxId"
+              placeholder="Ej. J-20123456-0" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Detalles de Empleo -->
+      <section class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 border-b border-white/10 pb-2.5 text-blue-400">
+          <span class="material-symbols-outlined text-lg">badge</span>
+          <h2 class="font-semibold text-sm text-white">Detalles de Empleo</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Código / ID de Empleado -->
+          <div class="space-y-1">
+            <label for="employeeId" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Código / ID de Empleado <span class="text-red-400">*</span>
+            </label>
+            <div class="relative">
+              <input 
+                id="employeeId"
+                type="text" 
+                formControlName="employeeId"
+                placeholder="Ej. WF-001 / EMP-1020"
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-mono font-bold text-blue-400 focus:outline-none focus:border-blue-500">
+              <span class="material-symbols-outlined absolute right-3 top-2.5 text-xs text-slate-400">badge</span>
+            </div>
+            @if (employeeForm.get('employeeId')?.touched && employeeForm.get('employeeId')?.invalid) {
+              <p class="text-[10px] font-bold text-red-400">El código de empleado es obligatorio.</p>
+            }
+          </div>
+
+          <!-- Fecha de Inicio -->
+          <div class="space-y-1">
+            <label for="startDate" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Fecha de Inicio</label>
+            <input 
+              id="startDate"
+              type="date" 
+              formControlName="startDate"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <!-- Departamento -->
+          <div class="space-y-1">
+            <label for="department" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Departamento <span class="text-red-400">*</span></label>
+            <select 
+              id="department"
+              formControlName="department"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="Ingeniería" class="bg-[#0F172A] text-slate-200">Ingeniería & Tecnología</option>
+              <option value="Recursos Humanos" class="bg-[#0F172A] text-slate-200">Recursos Humanos</option>
+              <option value="Ventas y Marketing" class="bg-[#0F172A] text-slate-200">Ventas y Marketing</option>
+              <option value="Operaciones" class="bg-[#0F172A] text-slate-200">Operaciones</option>
+              <option value="Finanzas" class="bg-[#0F172A] text-slate-200">Finanzas y Contabilidad</option>
+              <option value="Legal" class="bg-[#0F172A] text-slate-200">Legal y Cumplimiento</option>
+            </select>
+          </div>
+
+          <!-- Cargo -->
+          <div class="space-y-1">
+            <label for="position" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cargo / Posición <span class="text-red-400">*</span></label>
+            <input 
+              id="position"
+              type="text" 
+              formControlName="position"
+              placeholder="Ej. Senior Frontend Developer" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+            @if (employeeForm.get('position')?.touched && employeeForm.get('position')?.invalid) {
+              <p class="text-[10px] font-bold text-red-400">El cargo es obligatorio.</p>
+            }
+          </div>
+
+          <!-- Usuario de Sistema Vinculado (Modelo Usuario + Perfil) -->
+          <div class="md:col-span-2 space-y-1 pt-2 border-t border-white/5">
+            <label for="linkedUserId" class="block text-[11px] font-semibold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">link</span>
+              <span>Usuario de Sistema Vinculado (Opcional)</span>
+            </label>
+            <select 
+              id="linkedUserId"
+              formControlName="linkedUserId"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="" class="bg-[#0F172A] text-slate-400">[ Sin cuenta de usuario de sistema vinculada ]</option>
+              @for (u of auth.allUsers(); track u.uid) {
+                <option [value]="u.uid" class="bg-[#0F172A] text-slate-200">
+                  {{ u.displayName }} ({{ u.email }}) — Rol: {{ u.role.toUpperCase() }}
+                </option>
+              }
+            </select>
+            <p class="text-[10px] text-slate-400 mt-0.5">
+              💡 Permite separar la <strong>autenticación (Usuario)</strong> del <strong>expediente (Empleado)</strong>. El usuario seleccionado podrá acceder con esta ficha.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Detalles de Contacto -->
+      <section class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 border-b border-white/10 pb-2.5 text-blue-400">
+          <span class="material-symbols-outlined text-lg">contact_mail</span>
+          <h2 class="font-semibold text-sm text-white">Detalles de Contacto</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Correo de Trabajo -->
+          <div class="space-y-1">
+            <label for="workEmail" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Correo Trabajo <span class="text-red-400">*</span></label>
+            <input 
+              id="workEmail"
+              type="email" 
+              formControlName="workEmail"
+              placeholder="ejemplo@workforceos.com" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+            @if (employeeForm.get('workEmail')?.touched && employeeForm.get('workEmail')?.invalid) {
+              <p class="text-[10px] font-bold text-red-400">Proporciona un correo corporativo válido.</p>
+            }
+          </div>
+
+          <!-- Teléfono -->
+          <div class="space-y-1">
+            <label for="phone" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Teléfono Móvil</label>
+            <input 
+              id="phone"
+              type="text" 
+              formControlName="phone"
+              placeholder="+1 (555) 000-0000" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <!-- Contacto de Emergencia -->
+          <div class="md:col-span-2 space-y-1">
+            <label for="emergencyContact" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Contacto de Emergencia</label>
+            <input 
+              id="emergencyContact"
+              type="text" 
+              formControlName="emergencyContact"
+              placeholder="Ej. Laura Smith (Esposa) - +1 (555) 987-6543" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Información de Pago -->
+      <section class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-5">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2.5 text-blue-400">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">monetization_on</span>
+            <h2 class="font-semibold text-sm text-white">Información de Pago</h2>
+          </div>
+          <span class="text-[10px] bg-blue-600/10 text-blue-400 border border-blue-600/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Acreditación Directa</span>
+        </div>
+
+        <!-- Sub-Sección A: Datos Bancarios -->
+        <div class="space-y-3 bg-white/[0.02] p-3.5 rounded-lg border border-white/5">
+          <h3 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm">account_balance</span> Datos Bancarios
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="space-y-1">
+              <label for="bank" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Entidad Bancaria</label>
+              <select 
+                id="bank"
+                formControlName="bank"
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500">
+                @for (b of bankList; track b.code) {
+                  <option [value]="b.name" class="bg-[#0F172A] text-slate-200">
+                    {{ b.code }} - {{ b.name }} ({{ b.type }})
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="space-y-1 md:col-span-2">
+              <label for="accountNumber" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Número de Cuenta (20 Dígitos IBAN / Cuentas)</label>
+              <input 
+                id="accountNumber"
+                type="text" 
+                formControlName="accountNumber"
+                placeholder="01050011223344556677" 
+                maxlength="20"
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-Sección B: Datos de Pago Móvil -->
+        <div class="space-y-3 bg-white/[0.02] p-3.5 rounded-lg border border-white/5">
+          <h3 class="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm">phonelink_ring</span> Datos de Pago Móvil
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="space-y-1">
+              <label for="mobileBankCode" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cód. Banco Pago Móvil</label>
+              <select 
+                id="mobileBankCode"
+                formControlName="mobileBankCode"
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500">
+                @for (b of bankList; track b.code) {
+                  <option [value]="b.code" class="bg-[#0F172A] text-slate-200">
+                    {{ b.code }} - {{ b.name }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="space-y-1">
+              <label for="mobileId" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cédula / ID</label>
+              <input 
+                id="mobileId"
+                type="text" 
+                formControlName="mobileId"
+                placeholder="V-20123456" 
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div class="space-y-1">
+              <label for="mobilePhone" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Teléfono</label>
+              <input 
+                id="mobilePhone"
+                type="text" 
+                formControlName="mobilePhone"
+                placeholder="0412-1234567" 
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div class="space-y-1">
+              <label for="mobileType" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Titular</label>
+              <select 
+                id="mobileType"
+                formControlName="mobileType"
+                class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+                <option value="Personal" class="bg-[#0F172A] text-slate-200">Personal</option>
+                <option value="Tercero Autorizado" class="bg-[#0F172A] text-slate-200">Tercero Autorizado</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Configuración Salarial -->
+      <section class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 border-b border-white/10 pb-2.5 text-blue-400">
+          <span class="material-symbols-outlined text-lg">payments</span>
+          <h2 class="font-semibold text-sm text-white">Configuración Salarial y Contrato</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Tipo de Contrato -->
+          <div class="space-y-1">
+            <label for="contractType" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tipo de Contrato</label>
+            <select 
+              id="contractType"
+              formControlName="contractType"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="Tiempo Indeterminado" class="bg-[#0F172A] text-slate-200">Tiempo Indeterminado (Fijo)</option>
+              <option value="Tiempo Determinado" class="bg-[#0F172A] text-slate-200">Tiempo Determinado (Temporal)</option>
+              <option value="Honorarios Profesionales" class="bg-[#0F172A] text-slate-200">Honorarios Profesionales</option>
+              <option value="Pasantía" class="bg-[#0F172A] text-slate-200">Pasantía</option>
+            </select>
+          </div>
+
+          <!-- Monto Fijo -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label for="fixedSalary" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Monto Fijo Acordado (USD)</label>
+              <span class="text-[10px] text-amber-400 font-mono">Tasa BCV: Bs. {{ exchangeService.bcvRate() }}</span>
+            </div>
+            <input 
+              id="fixedSalary"
+              type="text" 
+              formControlName="fixedSalary"
+              placeholder="$ 3,200.00" 
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-bold text-blue-400 focus:outline-none focus:border-blue-500">
+            <div class="flex items-center justify-between text-[11px] font-mono font-semibold bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md text-amber-300 mt-1">
+              <span>Equivalente a pagar (Bs.):</span>
+              <span>{{ exchangeService.formatBs(exchangeService.usdToBs(exchangeService.parseUsdValue(employeeForm.get('fixedSalary')?.value))) }}</span>
+            </div>
+          </div>
+
+          <!-- Frecuencia de Pago -->
+          <div class="space-y-1">
+            <label for="payFrequency" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Frecuencia de Pago</label>
+            <select 
+              id="payFrequency"
+              formControlName="payFrequency"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="Quincenal" class="bg-[#0F172A] text-slate-200">Quincenal (15 y 30 de cada mes)</option>
+              <option value="Mensual" class="bg-[#0F172A] text-slate-200">Mensual (30 de cada mes)</option>
+              <option value="Semanal" class="bg-[#0F172A] text-slate-200">Semanal (Viernes)</option>
+            </select>
+          </div>
+
+          <!-- Estado -->
+          <div class="space-y-1">
+            <label for="status" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Estado Inicial</label>
+            <select 
+              id="status"
+              formControlName="status"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/10 rounded-md text-xs font-medium text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+              <option value="Onboarded" class="bg-[#0F172A] text-slate-200">Onboarded (Ingresado)</option>
+              <option value="In Training" class="bg-[#0F172A] text-slate-200">En Entrenamiento</option>
+              <option value="Pending" class="bg-[#0F172A] text-slate-200">Pendiente de Verificación</option>
+              <option value="Active" class="bg-[#0F172A] text-slate-200">Activo</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Column: Sticky Sidebar Cards -->
+    <div class="space-y-6">
+      
+      <!-- Photo Upload Card -->
+      <div class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-4 text-center">
+        <h3 class="font-semibold text-xs text-white uppercase tracking-wider border-b border-white/10 pb-2">Fotografía de Perfil</h3>
+
+        <div class="relative w-28 h-28 mx-auto group">
+          <img 
+            [src]="photoPreview()" 
+            alt="Preview Avatar" 
+            class="w-full h-full rounded-full object-cover border-2 border-blue-500 shadow-md">
+          
+          <label for="fileUploadInput" class="absolute bottom-1 right-1 p-2 bg-blue-600 text-white rounded-full cursor-pointer hover:bg-blue-500 transition-colors shadow-lg" title="Cambiar fotografía">
+            <span class="material-symbols-outlined text-base">add_a_photo</span>
+            <input id="fileUploadInput" type="file" accept="image/*" (change)="onFileSelected($event)" class="hidden">
+          </label>
+        </div>
+
+        <p class="text-[10px] text-slate-400 font-medium leading-relaxed">
+          Formatos: PNG, JPG (máx. 2MB). Dimensión recomendada: 400x400 px.
+        </p>
+      </div>
+
+      <!-- Actions Card -->
+      <div class="bg-[#151921] rounded-xl border border-white/10 p-5 shadow-sm space-y-4 sticky top-20">
+        <h3 class="font-semibold text-xs text-white uppercase tracking-wider border-b border-white/10 pb-2">Acciones del Registro</h3>
+
+        <div class="space-y-2.5">
+          <!-- Submit Button -->
+          <button 
+            type="submit" 
+            [disabled]="isSaving()"
+            class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-md font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2">
+            @if (isSaving()) {
+              <span class="material-symbols-outlined text-base animate-spin">refresh</span>
+              <span>Guardando en Firestore...</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">save</span>
+              <span>Guardar Empleado</span>
+            }
+          </button>
+
+          <!-- Cancel Button -->
+          <button 
+            type="button" 
+            (click)="cancel()"
+            class="w-full bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 py-2.5 rounded-md font-bold text-xs uppercase tracking-wider transition-colors">
+            Cancelar
+          </button>
+        </div>
+
+        <!-- Info Card Notice -->
+        <div class="p-3 bg-blue-600/10 rounded-lg border border-blue-600/20 space-y-1">
+          <div class="flex items-center gap-1.5 text-blue-400 font-bold text-[11px]">
+            <span class="material-symbols-outlined text-xs">mail</span>
+            <span>Notificación Automática</span>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-normal">
+            Al guardar, se enviará un correo electrónico de bienvenida automático con credenciales de acceso al portal de autoservicio.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </form>
+</main>

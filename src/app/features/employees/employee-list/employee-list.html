@@ -1,0 +1,217 @@
+<app-header (searchChange)="onSearchChange($event)"></app-header>
+
+<main class="p-6 md:p-8 space-y-6 animate-entrance max-w-7xl mx-auto">
+  <!-- Page Header Title & Action -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-white tracking-tight">Directorio de Empleados</h1>
+      <p class="text-xs text-slate-400 mt-0.5">
+        Mostrando {{ filteredEmployees().length }} de {{ empService.employees().length }} colaboradores registrados
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      @if (auth.permissions().canCreateEmployee) {
+        <a 
+          routerLink="/employees/new" 
+          class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider shadow-sm transition-all">
+          <span class="material-symbols-outlined text-base">add</span>
+          <span>Agregar Empleado</span>
+        </a>
+      }
+    </div>
+  </div>
+
+  <!-- Filters Bar -->
+  <div class="bg-[#151921] p-3 rounded-xl border border-white/10 shadow-sm flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+      <!-- Dept Filter -->
+      <div class="flex items-center gap-2 bg-[#0B0E14] border border-white/10 px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300">
+        <span class="material-symbols-outlined text-base text-blue-400">domain</span>
+        <span>Departamento:</span>
+        <select (change)="filterDept($event)" class="bg-transparent font-bold text-white focus:outline-none cursor-pointer text-xs">
+          <option value="todos" class="bg-[#0F172A] text-slate-200">Todos los Departamentos</option>
+          @for (dept of departments(); track dept) {
+            <option [value]="dept" class="bg-[#0F172A] text-slate-200">{{ dept }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="flex items-center gap-2 bg-[#0B0E14] border border-white/10 px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300">
+        <span class="material-symbols-outlined text-base text-blue-400">tune</span>
+        <span>Estado:</span>
+        <select (change)="filterStatus($event)" class="bg-transparent font-bold text-white focus:outline-none cursor-pointer text-xs">
+          <option value="todos" class="bg-[#0F172A] text-slate-200">Todos los Estados</option>
+          <option value="Onboarded" class="bg-[#0F172A] text-slate-200">Onboarded</option>
+          <option value="In Training" class="bg-[#0F172A] text-slate-200">En Entrenamiento</option>
+          <option value="Pending" class="bg-[#0F172A] text-slate-200">Pendiente</option>
+          <option value="Active" class="bg-[#0F172A] text-slate-200">Activo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Active Role Permission Banner -->
+    <div class="text-xs text-slate-400 flex items-center gap-1.5 bg-blue-600/10 border border-blue-600/20 px-3 py-1.5 rounded-md">
+      <span class="material-symbols-outlined text-sm text-blue-400">info</span>
+      <span>Nivel de acceso actual: <strong class="text-blue-400 font-bold uppercase">{{ auth.currentUser()?.role || 'admin' }}</strong></span>
+    </div>
+  </div>
+
+  <!-- Employee Table -->
+  <div class="bg-[#151921] rounded-xl border border-white/10 overflow-hidden shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-white/[0.03] border-b border-white/10 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          <tr>
+            <th class="py-3 px-5">Empleado / ID</th>
+            <th class="py-3 px-5">Departamento & Cargo</th>
+            <th class="py-3 px-5">Contacto</th>
+            <th class="py-3 px-5">Sueldo / Frecuencia</th>
+            <th class="py-3 px-5">Estado</th>
+            <th class="py-3 px-5 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+          @if (filteredEmployees().length === 0) {
+            <tr>
+              <td colspan="6" class="py-12 text-center text-slate-500">
+                <span class="material-symbols-outlined text-4xl text-slate-600 block mb-2">person_search</span>
+                <p class="font-bold text-sm text-slate-300">No se encontraron empleados</p>
+                <p class="text-xs">Prueba ajustando los filtros de búsqueda</p>
+              </td>
+            </tr>
+          } @else {
+            @for (emp of filteredEmployees(); track emp.id || emp.employeeId) {
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <!-- Name & Photo -->
+                <td class="py-3 px-5">
+                  <div class="flex items-center gap-3">
+                    <img [src]="emp.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'" 
+                         [alt]="emp.fullName" 
+                         class="w-9 h-9 rounded-full object-cover border border-white/10 shadow-xs">
+                    <div>
+                      <p class="font-bold text-white text-xs">{{ emp.fullName }}</p>
+                      <span class="inline-block text-[10px] font-mono font-bold bg-blue-600/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-600/20 mt-0.5">
+                        {{ emp.employeeId }}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Dept & Position -->
+                <td class="py-3 px-5">
+                  <p class="font-medium text-slate-200">{{ emp.position }}</p>
+                  <p class="text-[11px] text-slate-400 font-normal">{{ emp.department }}</p>
+                </td>
+
+                <!-- Contact -->
+                <td class="py-3 px-5">
+                  <p class="text-xs font-mono text-slate-300 truncate max-w-[180px]">{{ emp.workEmail }}</p>
+                  <p class="text-[11px] text-slate-500 font-mono">{{ emp.phone || 'N/A' }}</p>
+                </td>
+
+                <!-- Salary -->
+                <td class="py-3 px-5">
+                  <p class="font-bold text-blue-400 font-mono">{{ emp.fixedSalary || '$ 0.00' }}</p>
+                  <p class="text-[10px] font-mono font-semibold text-amber-400">
+                    {{ exchangeService.formatBs(exchangeService.usdToBs(exchangeService.parseUsdValue(emp.fixedSalary))) }}
+                  </p>
+                  <p class="text-[9px] text-slate-500">{{ emp.payFrequency || 'Quincenal' }}</p>
+                </td>
+
+                <!-- Status -->
+                <td class="py-3 px-5">
+                  @switch (emp.status) {
+                    @case ('Onboarded') {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Onboarded
+                      </span>
+                    }
+                    @case ('In Training') {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Entrenamiento
+                      </span>
+                    }
+                    @case ('Pending') {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Pendiente
+                      </span>
+                    }
+                    @default {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-500/20 text-slate-300 border border-slate-500/20">
+                        Activo
+                      </span>
+                    }
+                  }
+                </td>
+
+                <!-- Actions -->
+                <td class="py-3 px-5 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    @if (auth.permissions().canEditEmployee) {
+                      <button 
+                        (click)="editEmployee(emp)"
+                        class="p-1.5 text-blue-400 hover:bg-white/5 rounded-md transition-colors" 
+                        title="Editar Empleado">
+                        <span class="material-symbols-outlined text-base">edit</span>
+                      </button>
+                    }
+                    @if (auth.permissions().canDeleteEmployee) {
+                      <button 
+                        (click)="promptDelete(emp)"
+                        class="p-1.5 text-red-400 hover:bg-white/5 rounded-md transition-colors" 
+                        title="Eliminar Empleado">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Delete Confirmation Modal -->
+@if (deleteTarget()) {
+  <div class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[#151921] rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-white/10 animate-entrance">
+      <div class="flex items-center gap-3 text-red-400">
+        <div class="p-2.5 bg-red-500/10 rounded-lg border border-red-500/20">
+          <span class="material-symbols-outlined text-2xl">warning</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-base text-white">Confirmar Eliminación</h3>
+          <p class="text-xs text-slate-400">Esta acción eliminará el registro de Firestore permanentemente.</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-300">
+        ¿Estás seguro de que deseas eliminar a <strong class="text-white font-bold">{{ deleteTarget()?.fullName }}</strong> (ID: {{ deleteTarget()?.employeeId }})?
+      </p>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button 
+          (click)="cancelDelete()"
+          class="px-4 py-2 rounded-md text-xs font-bold text-slate-400 hover:bg-white/5 transition-colors">
+          Cancelar
+        </button>
+        <button 
+          (click)="confirmDelete()"
+          [disabled]="isDeleting()"
+          class="px-4 py-2 rounded-md text-xs font-bold text-white bg-red-600 hover:bg-red-500 transition-colors flex items-center gap-1.5 shadow-sm">
+          @if (isDeleting()) {
+            <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
+            <span>Eliminando...</span>
+          } @else {
+            <span>Eliminar Definitivamente</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

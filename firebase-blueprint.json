@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles & Access Levels",
+      "description": "User profile metadata and assigned role in WorkforceOS",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "hr", "standard"] },
+        "department": { "type": "string" },
+        "title": { "type": "string" },
+        "bio": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email", "displayName", "role"]
+    },
+    "employees": {
+      "title": "Employee Records",
+      "description": "Personnel records managed in WorkforceOS",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "dob": { "type": "string" },
+        "gender": { "type": "string" },
+        "personalId": { "type": "string" },
+        "taxId": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "startDate": { "type": "string" },
+        "department": { "type": "string" },
+        "position": { "type": "string" },
+        "workEmail": { "type": "string" },
+        "phone": { "type": "string" },
+        "emergencyContact": { "type": "string" },
+        "bank": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "accountType": { "type": "string" },
+        "mobileBankCode": { "type": "string" },
+        "mobileId": { "type": "string" },
+        "mobilePhone": { "type": "string" },
+        "mobileType": { "type": "string" },
+        "contractType": { "type": "string" },
+        "conceptType": { "type": "string" },
+        "fixedSalary": { "type": "string" },
+        "payFrequency": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["fullName", "employeeId", "department", "position", "workEmail"]
+    },
+    "attendance": {
+      "title": "Attendance & Time Off Requests",
+      "description": "Clock ins and time off requests",
+      "type": "object",
+      "properties": {
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "type": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["employeeName", "type", "status"]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Workforce HR Management System",
+  "description": "Enterprise HR Management platform with Google Authentication, Firestore realtime storage, and role-based access control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

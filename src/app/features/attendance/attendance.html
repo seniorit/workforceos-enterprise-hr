@@ -1,0 +1,384 @@
+<app-header searchPlaceholder="Buscar por empleado, motivo, departamento..."></app-header>
+
+<main class="p-6 md:p-8 space-y-6 animate-entrance max-w-7xl mx-auto text-slate-200">
+  
+  <!-- Toast Notification -->
+  @if (notice()) {
+    <div class="p-4 bg-emerald-950/90 border border-emerald-500/40 text-white rounded-xl shadow-xl flex items-center justify-between animate-entrance">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-emerald-400 text-xl">check_circle</span>
+        <p class="text-xs font-semibold text-slate-100">{{ notice() }}</p>
+      </div>
+      <button (click)="notice.set(null)" class="text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider">OK</button>
+    </div>
+  }
+
+  <!-- Page Header & Action -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-white tracking-tight">Control de Asistencia & Inasistencias</h1>
+      <p class="text-xs text-slate-400 mt-0.5">
+        Ingreso centralizado de marcas de jornada, justificación de faltas y permisos
+      </p>
+    </div>
+
+    <!-- Supervisor Primary Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button 
+        (click)="openLeaveModal()"
+        type="button"
+        class="inline-flex items-center gap-2 bg-amber-600/20 border border-amber-500/30 hover:bg-amber-600 text-amber-300 hover:text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all shrink-0 active:scale-[0.98]">
+        <span class="material-symbols-outlined text-lg">event_upcoming</span>
+        <span>Solicitar Permiso / Vacaciones</span>
+      </button>
+
+      @if (auth.permissions().canApproveTimeOff) {
+        <button 
+          (click)="openRegistrationModal()"
+          type="button"
+          class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-all shrink-0 active:scale-[0.98]">
+          <span class="material-symbols-outlined text-lg">edit_calendar</span>
+          <span>Registrar Asistencia / Inasistencia</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Metric Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <!-- Presentes Hoy -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-emerald-500/30 shadow-sm relative overflow-hidden">
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Asistencias de Hoy</span>
+        <span class="material-symbols-outlined text-emerald-400">check_circle</span>
+      </div>
+      <h3 class="text-2xl font-bold font-mono text-emerald-300 tracking-tight">
+        {{ totalPresentToday() }} Empleados
+      </h3>
+      <p class="text-xs text-slate-400 mt-1">Jornada laboral iniciada / cumplida</p>
+    </div>
+
+    <!-- Inasistencias Hoy -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-red-500/30 shadow-sm">
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-red-400">Inasistencias / Ausencias</span>
+        <span class="material-symbols-outlined text-red-400">event_busy</span>
+      </div>
+      <h3 class="text-2xl font-bold font-mono text-red-300 tracking-tight">
+        {{ totalAbsentToday() }} Registradas
+      </h3>
+      <p class="text-xs text-slate-400 mt-1">Reposos, permisos y faltas de hoy</p>
+    </div>
+
+    <!-- Permisos Registrados -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-amber-500/30 shadow-sm">
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Solicitudes Registradas</span>
+        <span class="material-symbols-outlined text-amber-400">pending_actions</span>
+      </div>
+      <h3 class="text-2xl font-bold font-mono text-amber-300 tracking-tight">
+        {{ registeredLeavesCount() }} Solicitudes
+      </h3>
+      <p class="text-xs text-slate-400 mt-1">Pendientes por revisión o aprobación</p>
+    </div>
+  </div>
+
+  <!-- Attendance & Absence Log Table -->
+  <div class="bg-[#151921] rounded-xl border border-white/10 overflow-hidden shadow-sm space-y-4">
+    
+    <!-- Table Toolbar -->
+    <div class="p-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <h2 class="font-bold text-sm text-white">Registro de Asistencias e Inasistencias</h2>
+        <p class="text-[11px] text-slate-400">Historial de marcajes y faltas justificadas por el supervisor</p>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <!-- Search Input -->
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+          <input 
+            type="text" 
+            [ngModel]="searchTerm()" 
+            (ngModelChange)="searchTerm.set($event)"
+            placeholder="Buscar empleado o motivo..." 
+            class="pl-8 pr-3 py-1.5 bg-[#0B0E14] border border-white/10 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500 w-full sm:w-48">
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-[#0B0E14] p-1 rounded-lg border border-white/10 flex items-center gap-1 text-[11px] font-bold">
+          <button 
+            type="button" 
+            (click)="filterType.set('ALL')"
+            [class.bg-blue-600]="filterType() === 'ALL'"
+            [class.text-white]="filterType() === 'ALL'"
+            [class.text-slate-400]="filterType() !== 'ALL'"
+            class="px-2.5 py-1 rounded transition-colors">
+            Todos
+          </button>
+          <button 
+            type="button" 
+            (click)="filterType.set('ASISTENCIA')"
+            [class.bg-emerald-600]="filterType() === 'ASISTENCIA'"
+            [class.text-white]="filterType() === 'ASISTENCIA'"
+            [class.text-slate-400]="filterType() !== 'ASISTENCIA'"
+            class="px-2.5 py-1 rounded transition-colors">
+            Asistencias
+          </button>
+          <button 
+            type="button" 
+            (click)="filterType.set('INASISTENCIA')"
+            [class.bg-red-600]="filterType() === 'INASISTENCIA'"
+            [class.text-white]="filterType() === 'INASISTENCIA'"
+            [class.text-slate-400]="filterType() !== 'INASISTENCIA'"
+            class="px-2.5 py-1 rounded transition-colors">
+            Inasistencias
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Body -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-white/[0.03] border-b border-white/10 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          <tr>
+            <th class="py-3 px-5">Colaborador</th>
+            <th class="py-3 px-5">Fecha</th>
+            <th class="py-3 px-5">Tipo & Estado</th>
+            <th class="py-3 px-5">Horario / Motivo & Detalles</th>
+            <th class="py-3 px-5">Registrado Por</th>
+            <th class="py-3 px-5 text-right">Acción</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+          @for (rec of filteredRecords(); track rec.id) {
+            <tr class="hover:bg-white/[0.02] transition-colors">
+              <!-- Employee -->
+              <td class="py-3.5 px-5">
+                <div class="flex items-center gap-3">
+                  <img 
+                    [src]="rec.employeePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'" 
+                    [alt]="rec.employeeName" 
+                    class="w-9 h-9 rounded-full object-cover border border-white/10 shrink-0">
+                  <div>
+                    <p class="font-bold text-white text-xs">{{ rec.employeeName }}</p>
+                    <p class="text-[10px] text-slate-400 font-mono">{{ rec.department || 'General' }}</p>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Fecha -->
+              <td class="py-3.5 px-5 font-mono text-slate-300 font-semibold whitespace-nowrap">
+                {{ rec.date }}
+              </td>
+
+              <!-- Tipo & Estado Badge -->
+              <td class="py-3.5 px-5 whitespace-nowrap">
+                @if (rec.type === 'ASISTENCIA') {
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Asistencia
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                      {{ rec.condition || 'Puntual' }}
+                    </span>
+                  </div>
+                } @else {
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+                      Inasistencia
+                    </span>
+                    @if (rec.isJustified) {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        Justificada
+                      </span>
+                    } @else {
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-600/20 text-red-300 border border-red-600/30">
+                        Injustificada
+                      </span>
+                    }
+                  </div>
+                }
+              </td>
+
+              <!-- Horario / Motivo & Detalles -->
+              <td class="py-3.5 px-5 max-w-xs">
+                @if (rec.type === 'ASISTENCIA') {
+                  <div class="space-y-0.5">
+                    <p class="font-mono text-xs font-bold text-slate-200">
+                      Entrada: <span class="text-emerald-400">{{ rec.checkInTime || '08:00 AM' }}</span>
+                      <span class="text-slate-500 mx-1">|</span>
+                      Salida: <span class="text-blue-400">{{ rec.checkOutTime || '05:00 PM' }}</span>
+                    </p>
+                    @if (rec.details) {
+                      <p class="text-[10px] text-slate-400 truncate">{{ rec.details }}</p>
+                    }
+                  </div>
+                } @else {
+                  <div class="space-y-0.5">
+                    <p class="font-bold text-red-300 text-xs">{{ rec.absenceReason }}</p>
+                    <p class="text-[11px] text-slate-300 line-clamp-2 italic">"{{ rec.details }}"</p>
+                  </div>
+                }
+              </td>
+
+              <!-- Registrado Por -->
+              <td class="py-3.5 px-5 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                {{ rec.loggedBy || 'Supervisión' }}
+              </td>
+
+              <!-- Acción -->
+              <td class="py-3.5 px-5 text-right whitespace-nowrap">
+                @if (auth.permissions().canApproveTimeOff) {
+                  <button 
+                    (click)="deleteRecord(rec.id)"
+                    type="button"
+                    title="Eliminar Registro"
+                    class="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors">
+                    <span class="material-symbols-outlined text-base">delete</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="py-8 text-center text-slate-400 text-xs">
+                No hay registros de asistencia o inasistencia que coincidan con la búsqueda.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Leave & Vacation Approvals Section -->
+  <div class="bg-[#151921] rounded-xl border border-white/10 shadow-sm p-5 space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-3 gap-2">
+      <div>
+        <h2 class="font-bold text-sm text-white">Solicitudes de Permiso & Vacaciones</h2>
+        <p class="text-[11px] text-slate-400">Flujo de revisión, edición, eliminación y aprobación de solicitudes</p>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded">
+          {{ registeredLeavesCount() }} Registradas
+        </span>
+
+        <button 
+          (click)="openLeaveModal()"
+          type="button"
+          class="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-xs transition-all active:scale-[0.98]">
+          <span class="material-symbols-outlined text-base">add</span>
+          <span>Nueva Solicitud</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="space-y-2.5">
+      @for (req of attService.leaveRequests(); track req.id) {
+        <div class="p-3.5 bg-white/[0.02] rounded-lg border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1 min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-bold text-xs text-white">{{ req.employeeName }}</h3>
+              <span class="text-[10px] font-bold uppercase bg-blue-600/10 text-blue-400 border border-blue-600/20 px-2 py-0.5 rounded">
+                {{ req.type }}
+              </span>
+
+              <!-- Status Badge -->
+              @if (req.status === 'Registrada') {
+                <span class="text-[10px] font-bold uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  Registrada
+                </span>
+              } @else if (req.status === 'Aprobada') {
+                <span class="text-[10px] font-bold uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  ✓ Aprobada
+                </span>
+              } @else {
+                <span class="text-[10px] font-bold uppercase text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded">
+                  ✕ Rechazada
+                </span>
+              }
+            </div>
+            <p class="text-xs text-slate-300 truncate">Motivo: {{ req.reason }}</p>
+            <p class="text-[10px] text-slate-400 font-mono">
+              Periodo: {{ req.startDate }} al {{ req.endDate }}
+            </p>
+          </div>
+
+          <!-- Actions / Decision -->
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            @if (req.status === 'Registrada') {
+              <!-- Edit & Delete buttons (Available in Registrada state) -->
+              <button 
+                (click)="openLeaveModal(req)"
+                type="button"
+                title="Editar Solicitud"
+                class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-amber-400">edit</span>
+                <span>Editar</span>
+              </button>
+
+              <button 
+                (click)="deleteLeaveRequest(req)"
+                type="button"
+                title="Eliminar Solicitud"
+                class="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">delete</span>
+                <span>Eliminar</span>
+              </button>
+
+              <!-- Approval Actions for Supervisors / Admins -->
+              @if (auth.permissions().canApproveTimeOff) {
+                <div class="h-4 w-px bg-white/10 mx-1"></div>
+                <button 
+                  (click)="updateLeaveStatus(req.id, 'Aprobada')"
+                  type="button"
+                  class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors shadow-xs">
+                  Aprobar
+                </button>
+                <button 
+                  (click)="updateLeaveStatus(req.id, 'Rechazada')"
+                  type="button"
+                  class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-bold transition-colors">
+                  Rechazar
+                </button>
+              }
+            } @else {
+              <!-- Final State Lock Indicator -->
+              <div class="flex items-center gap-1.5 text-[10px] text-slate-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg font-mono">
+                <span class="material-symbols-outlined text-xs text-slate-400">lock</span>
+                <span>Estado final (No editable)</span>
+              </div>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="py-8 text-center text-slate-400 text-xs bg-white/[0.01] border border-dashed border-white/10 rounded-xl">
+          No hay solicitudes de permiso o vacaciones registradas actualmente.
+        </div>
+      }
+    </div>
+  </div>
+
+</main>
+
+<!-- Supervisor Attendance & Absence Modal -->
+<app-attendance-modal
+  [isOpen]="showModal()"
+  [preselectedEmployeeId]="preselectedEmpId()"
+  (closeModal)="closeModal()"
+  (recordAdded)="onRecordAdded($event)">
+</app-attendance-modal>
+
+<!-- Leave Request Modal -->
+<app-leave-modal
+  [isOpen]="showLeaveModal()"
+  [editingRequest]="editingLeaveRequest()"
+  (closeModal)="closeLeaveModal()"
+  (requestSaved)="onLeaveRequestSaved($event)">
+</app-leave-modal>
+

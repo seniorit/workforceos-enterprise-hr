@@ -1,0 +1,98 @@
+@if (!auth.currentUser() || isLoginPage()) {
+  <main class="min-h-screen bg-[#0B0E14]">
+    <router-outlet></router-outlet>
+  </main>
+} @else {
+  <div class="min-h-screen bg-[#0B0E14] text-slate-300 flex flex-col">
+    <!-- Desktop Permanent Sidebar -->
+    <app-sidebar></app-sidebar>
+
+    <!-- Mobile Responsive Navigation Bar -->
+    <div class="lg:hidden bg-[#0F172A] border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+      <div class="flex items-center gap-2">
+        <button (click)="toggleMobileMenu()" type="button" class="p-2 text-blue-400 hover:bg-white/5 rounded-lg">
+          <span class="material-symbols-outlined text-2xl">menu</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center font-bold text-white text-xs">W</div>
+          <span class="font-bold text-base text-white tracking-tight">WorkforceOS</span>
+        </div>
+      </div>
+
+      <span class="text-[10px] font-bold bg-blue-600/10 text-blue-400 border border-blue-600/20 px-2.5 py-0.5 rounded uppercase">
+        {{ auth.currentRole() }}
+      </span>
+    </div>
+
+    <!-- Mobile Drawer Overlay -->
+    @if (isMobileMenuOpen) {
+      <div class="lg:hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex">
+        <!-- Backdrop button for dismiss -->
+        <button 
+          type="button"
+          (click)="toggleMobileMenu()" 
+          class="absolute inset-0 w-full h-full cursor-default border-none bg-transparent" 
+          aria-label="Cerrar menú">
+        </button>
+
+        <div class="w-64 bg-[#0F172A] border-r border-white/10 h-full p-6 space-y-6 flex flex-col shadow-2xl relative z-10">
+          <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 bg-blue-600 rounded flex items-center justify-center font-bold text-white text-xs">W</div>
+              <div>
+                <h2 class="font-bold text-lg text-white tracking-tight">WorkforceOS</h2>
+                <p class="text-[10px] text-slate-500 font-normal uppercase tracking-wider">v4.2.0-stable</p>
+              </div>
+            </div>
+            <button (click)="toggleMobileMenu()" type="button" class="p-1 text-slate-400 hover:text-white">
+              <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+
+          <nav class="space-y-1 flex-1">
+            <a routerLink="/dashboard" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">dashboard</span> Panel de Control
+            </a>
+            <a routerLink="/employees" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">groups</span> Empleados
+            </a>
+            <a routerLink="/payroll" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">payments</span> Nómina
+            </a>
+            <a routerLink="/attendance" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">calendar_today</span> Asistencia
+            </a>
+            <a routerLink="/reports" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">picture_as_pdf</span> Reportes PDF
+            </a>
+            <a routerLink="/settings" (click)="toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-white/5">
+              <span class="material-symbols-outlined text-lg">settings</span> Configuración
+            </a>
+          </nav>
+        </div>
+      </div>
+    }
+
+    <!-- Main Content View Area -->
+    <div class="lg:pl-56 flex-1 flex flex-col min-h-screen">
+      <div class="flex-1">
+        <router-outlet></router-outlet>
+      </div>
+
+      <!-- Bottom Status Bar -->
+      <footer class="h-8 bg-[#0F172A] border-t border-white/10 flex items-center justify-between px-6 text-[9px] uppercase tracking-widest text-slate-500 shrink-0">
+        <div class="flex gap-6">
+          <span>Region: us-east-1</span>
+          <span>Platform: WorkforceOS Enterprise</span>
+        </div>
+        <div class="flex gap-4">
+          <span class="text-slate-400 font-mono">Firestore-Live-Sync</span>
+          <span class="text-emerald-400 font-bold flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> SYSTEM HEALTHY
+          </span>
+        </div>
+      </footer>
+    </div>
+  </div>
+}
+

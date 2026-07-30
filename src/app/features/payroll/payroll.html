@@ -1,0 +1,313 @@
+<app-header searchPlaceholder="Buscar nómina, cuenta bancaria, empleado..."></app-header>
+
+<main class="p-6 md:p-8 space-y-6 animate-entrance max-w-7xl mx-auto text-slate-200">
+  <!-- Toast Notification -->
+  @if (processedNotice()) {
+    <div class="p-4 bg-emerald-950/90 border border-emerald-500/40 text-white rounded-xl shadow-xl flex items-center justify-between animate-entrance">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-emerald-400 text-xl">check_circle</span>
+        <p class="text-xs font-semibold text-slate-100">{{ processedNotice() }}</p>
+      </div>
+      <button (click)="processedNotice.set(null)" class="text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider">OK</button>
+    </div>
+  }
+
+  <!-- Header & Action -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl font-bold text-white tracking-tight">Gestión de Nómina & Pagos</h1>
+        <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
+          <span>🇻🇪</span> Tasa BCV: Bs. {{ exchangeService.bcvRate() }}
+        </span>
+      </div>
+      <p class="text-xs text-slate-400 mt-0.5">
+        Cálculo automatizado de salarios en Bolívares basados en la tasa oficial del Banco Central de Venezuela
+      </p>
+    </div>
+
+    @if (auth.permissions().canManagePayroll) {
+      <button 
+        (click)="processBatchPayroll()"
+        class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider shadow-sm transition-all">
+        <span class="material-symbols-outlined text-base">payments</span>
+        <span>Procesar Lote de Nómina en Bs.</span>
+      </button>
+    }
+  </div>
+
+  <!-- Metric Cards with Dual Currency Representation -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Total Mónima Quincenal en USD & Bs. -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-amber-500/30 shadow-sm relative overflow-hidden">
+      <div class="absolute -right-3 -bottom-3 text-amber-500/5 select-none pointer-events-none">
+        <span class="material-symbols-outlined text-8xl">account_balance_wallet</span>
+      </div>
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Nómina Total Estimada</span>
+        <span class="material-symbols-outlined text-amber-400">payments</span>
+      </div>
+      <h3 class="text-xl font-bold font-mono text-amber-300 tracking-tight">
+        {{ exchangeService.formatBs(totalPayrollBs()) }}
+      </h3>
+      <p class="text-xs font-mono font-semibold text-blue-400 mt-0.5">
+        Equivalente: {{ exchangeService.formatUsd(totalPayrollUsd()) }}
+      </p>
+      <p class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-white/10">Calculado a Tasa BCV: Bs. {{ exchangeService.bcvRate() }} / USD</p>
+    </div>
+
+    <!-- Total Empleados -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-white/10 shadow-sm">
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider">Total Colaboradores</span>
+        <span class="material-symbols-outlined text-blue-400">badge</span>
+      </div>
+      <h3 class="text-2xl font-bold text-white tracking-tight">{{ totalEmployees() }} Registros</h3>
+      <p class="text-[11px] text-slate-400 mt-1">Sueldos base + honorarios</p>
+    </div>
+
+    <!-- Cuentas Bancarias -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-white/10 shadow-sm">
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider">Cuentas Bancarias</span>
+        <span class="material-symbols-outlined text-blue-400">account_balance</span>
+      </div>
+      <h3 class="text-2xl font-bold text-white tracking-tight">{{ bankCount() }} Cuentas</h3>
+      <p class="text-[11px] text-blue-400 font-medium mt-1">Lotes de acreditación (20 dígitos)</p>
+    </div>
+
+    <!-- Pago Móvil -->
+    <div class="bg-[#151921] p-5 rounded-xl border border-white/10 shadow-sm">
+      <div class="flex items-center justify-between text-slate-400 mb-2">
+        <span class="text-[11px] font-semibold uppercase tracking-wider">Pago Móvil Habilitado</span>
+        <span class="material-symbols-outlined text-purple-400">phonelink_ring</span>
+      </div>
+      <h3 class="text-2xl font-bold text-white tracking-tight">{{ mobilePayCount() }} Configurados</h3>
+      <p class="text-[11px] text-purple-400 font-medium mt-1">Dispersión inmediata en Bolívares</p>
+    </div>
+  </div>
+
+  <!-- Payroll Table -->
+  <div class="bg-[#151921] rounded-xl border border-white/10 overflow-hidden shadow-sm">
+    <div class="p-4 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div>
+        <h2 class="font-semibold text-sm text-white">Detalle Individual de Sueldos & Equivalente BCV</h2>
+        <p class="text-[11px] text-slate-400">Verifica los montos en USD y su monto exacto a pagar en Bolívares (Bs.)</p>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs font-mono bg-white/5 border border-white/10 px-3 py-1 rounded-md">
+        <span class="text-slate-400">Tasa de Cambio Oficial:</span>
+        <strong class="text-amber-400 font-bold">Bs. {{ exchangeService.bcvRate() }} / USD</strong>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-white/[0.03] border-b border-white/10 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          <tr>
+            <th class="py-3 px-5">Empleado</th>
+            <th class="py-3 px-5">Contrato</th>
+            <th class="py-3 px-5">Sueldo USD ($)</th>
+            <th class="py-3 px-5">Monto en Bolívares (Bs.)</th>
+            <th class="py-3 px-5">Método de Pago</th>
+            <th class="py-3 px-5 text-right">Recibo / Pago</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+          @for (emp of empService.employees(); track emp.id || emp.employeeId) {
+            <tr class="hover:bg-white/[0.02] transition-colors">
+              <!-- Empleado -->
+              <td class="py-3 px-5 flex items-center gap-3">
+                <img [src]="emp.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'" 
+                     [alt]="emp.fullName" 
+                     class="w-9 h-9 rounded-full object-cover border border-white/10">
+                <div>
+                  <p class="font-bold text-white text-xs">{{ emp.fullName }}</p>
+                  <p class="text-[10px] text-slate-400 font-mono">{{ emp.employeeId }} | {{ emp.personalId || 'V-00000000' }}</p>
+                </div>
+              </td>
+
+              <!-- Contrato -->
+              <td class="py-3 px-5 text-slate-300 font-normal">
+                <p>{{ emp.contractType || 'Tiempo Indeterminado' }}</p>
+                <p class="text-[10px] text-slate-500">{{ emp.payFrequency || 'Quincenal' }}</p>
+              </td>
+
+              <!-- Sueldo USD -->
+              <td class="py-3 px-5">
+                <p class="font-bold text-blue-400 font-mono text-xs">{{ emp.fixedSalary || '$ 0.00' }}</p>
+                <p class="text-[9px] text-slate-500 uppercase font-semibold">Monto Base USD</p>
+              </td>
+
+              <!-- Monto Bolívares -->
+              <td class="py-3 px-5">
+                <p class="font-bold text-amber-300 font-mono text-xs">
+                  {{ exchangeService.formatBs(exchangeService.usdToBs(exchangeService.parseUsdValue(emp.fixedSalary))) }}
+                </p>
+                <p class="text-[9px] text-slate-400 font-mono">Tasa BCV: Bs. {{ exchangeService.bcvRate() }}</p>
+              </td>
+
+              <!-- Método de Pago -->
+              <td class="py-3 px-5 text-xs">
+                @if (emp.bank && emp.accountNumber) {
+                  <p class="font-semibold text-slate-200 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs text-blue-400">account_balance</span>
+                    <span>{{ emp.bank }}</span>
+                  </p>
+                  <p class="font-mono text-slate-400 text-[10px] truncate max-w-[140px]">{{ emp.accountNumber }}</p>
+                } @else if (emp.mobilePhone) {
+                  <p class="font-semibold text-slate-200 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs text-purple-400">phonelink_ring</span>
+                    <span>Pago Móvil ({{ emp.mobileBankCode || '0105' }})</span>
+                  </p>
+                  <p class="font-mono text-slate-400 text-[10px]">{{ emp.mobilePhone }}</p>
+                } @else {
+                  <span class="text-slate-500 italic">Pendiente por configurar</span>
+                }
+              </td>
+
+              <!-- Acción / Ver Recibo / Pago Móvil -->
+              <td class="py-3 px-5 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <button 
+                    (click)="openPayslip(emp)"
+                    type="button"
+                    title="Ver Recibo de Pago"
+                    class="px-2.5 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 min-h-[36px]">
+                    <span class="material-symbols-outlined text-sm text-blue-400">receipt_long</span>
+                    <span class="hidden sm:inline">Recibo</span>
+                  </button>
+
+                  @if (auth.permissions().canManagePayroll) {
+                    <button 
+                      (click)="openPagoMovilModal(emp)"
+                      type="button"
+                      title="Procesar Pago Móvil en Bolívares"
+                      class="px-3 py-1.5 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600 text-purple-300 hover:text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 min-h-[36px] shadow-xs active:scale-[0.98]">
+                      <span class="material-symbols-outlined text-sm">phonelink_ring</span>
+                      <span>Pago Móvil</span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Payslip / Recibo de Pago Modal -->
+@if (selectedPayslipEmp()) {
+  @let emp = selectedPayslipEmp()!;
+  @let usdVal = exchangeService.parseUsdValue(emp.fixedSalary);
+  @let bsVal = exchangeService.usdToBs(usdVal);
+
+  <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[#151921] rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-white/10 animate-entrance text-slate-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center justify-center text-blue-400">
+            <span class="material-symbols-outlined text-2xl">receipt_long</span>
+          </div>
+          <div>
+            <h2 class="font-bold text-base text-white">Comprobante de Pago de Nómina</h2>
+            <p class="text-xs text-slate-400">Liquidación en Bolívares segun Tasa Oficial BCV</p>
+          </div>
+        </div>
+        <button (click)="closePayslip()" type="button" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <!-- Employee Summary -->
+      <div class="bg-[#0B0E14] p-4 rounded-xl border border-white/10 space-y-2">
+        <div class="flex items-center justify-between">
+          <p class="font-bold text-sm text-white">{{ emp.fullName }}</p>
+          <span class="text-[10px] font-mono bg-blue-600/10 text-blue-400 border border-blue-600/20 px-2 py-0.5 rounded font-bold">
+            {{ emp.employeeId }}
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+          <p>Identificación: <strong class="text-slate-200 font-mono">{{ emp.personalId || 'V-00000000' }}</strong></p>
+          <p>Cargo: <strong class="text-slate-200">{{ emp.position }}</strong></p>
+          <p>Departamento: <strong class="text-slate-200">{{ emp.department }}</strong></p>
+          <p>Frecuencia: <strong class="text-slate-200">{{ emp.payFrequency || 'Quincenal' }}</strong></p>
+        </div>
+      </div>
+
+      <!-- Breakdown Table -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-white uppercase tracking-wider">Desglose de Pago</h3>
+        
+        <div class="bg-[#0B0E14] rounded-xl border border-white/10 p-4 space-y-2.5 text-xs">
+          <div class="flex justify-between items-center text-slate-300">
+            <span>Sueldo Base Acordado (USD):</span>
+            <span class="font-mono font-bold text-blue-400">{{ exchangeService.formatUsd(usdVal) }}</span>
+          </div>
+
+          <div class="flex justify-between items-center text-slate-300">
+            <span class="flex items-center gap-1">
+              <span>Tasa de Cambio Oficial BCV:</span>
+            </span>
+            <span class="font-mono font-bold text-amber-400">Bs. {{ exchangeService.bcvRate() }} / USD</span>
+          </div>
+
+          <div class="pt-2 border-t border-white/10 flex justify-between items-center font-bold text-sm text-white">
+            <span class="text-amber-300">Total Neto a Pagar en Bolívares (Bs.):</span>
+            <span class="font-mono text-amber-300 text-base">{{ exchangeService.formatBs(bsVal) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bank or Mobile Payment Info -->
+      <div class="bg-blue-600/10 border border-blue-600/20 p-3 rounded-xl text-xs space-y-1">
+        <p class="font-bold text-blue-300 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-base">account_balance_wallet</span>
+          <span>Datos de Acreditación</span>
+        </p>
+        @if (emp.bank && emp.accountNumber) {
+          <p class="text-slate-300">Banco: <strong>{{ emp.bank }}</strong></p>
+          <p class="text-slate-300 font-mono text-[11px]">Cuenta: {{ emp.accountNumber }}</p>
+        } @else if (emp.mobilePhone) {
+          <p class="text-slate-300">Pago Móvil Banco Code: <strong>{{ emp.mobileBankCode || '0105' }}</strong></p>
+          <p class="text-slate-300 font-mono text-[11px]">Teléfono: {{ emp.mobilePhone }} | Cédula: {{ emp.mobileId || emp.personalId }}</p>
+        } @else {
+          <p class="text-slate-400 italic">Sin datos bancarios registrados.</p>
+        }
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button 
+          (click)="closePayslip()"
+          type="button"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-lg text-xs font-bold transition-colors">
+          Cerrar
+        </button>
+
+        @if (auth.permissions().canManagePayroll) {
+          <button 
+            (click)="openPagoMovilModal(emp)"
+            type="button"
+            class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm">
+            <span class="material-symbols-outlined text-sm">phonelink_ring</span>
+            <span>Pago Móvil en Bolívares</span>
+          </button>
+        }
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal de Pago Móvil con opción de Datos Temporales -->
+<app-pago-movil-modal
+  [isOpen]="showPagoMovilModal()"
+  [employee]="selectedPagoMovilEmp()"
+  (closeModal)="closePagoMovilModal()"
+  (confirmPayment)="onConfirmPagoMovil($event)">
+</app-pago-movil-modal>

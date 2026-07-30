@@ -1,0 +1,179 @@
+@if (isOpen()) {
+  <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[#151921] rounded-2xl max-w-xl w-full p-6 space-y-6 shadow-2xl border border-white/10 animate-entrance max-h-[90vh] overflow-y-auto text-slate-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center text-amber-400 font-bold text-lg">
+            🇻🇪
+          </div>
+          <div>
+            <h2 class="font-bold text-lg text-white tracking-tight">Gestión de Tasa de Cambio BCV</h2>
+            <p class="text-xs text-slate-400">Banco Central de Venezuela (USD / VES)</p>
+          </div>
+        </div>
+        <button (click)="onClose()" type="button" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <!-- Success Notice -->
+      @if (successNotice()) {
+        <div class="p-3 bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-base">check_circle</span>
+          <span>{{ successNotice() }}</span>
+        </div>
+      }
+
+      <!-- Rate Update Section (Admin/HR) -->
+      <div class="bg-[#0B0E14] p-4 rounded-xl border border-white/10 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-base">currency_exchange</span>
+            Tasa Oficial BCV Actual
+          </h3>
+          <span class="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded uppercase">
+            Sincronización en Vivo
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+          <div>
+            <label for="bcvRateInputVal" class="text-[11px] text-slate-400 block mb-1">Valor de 1.00 USD en Bolívares (Bs.):</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Bs.</span>
+              <input 
+                id="bcvRateInputVal"
+                type="number" 
+                step="0.01" 
+                min="0.1" 
+                [ngModel]="newRateInput()" 
+                (ngModelChange)="newRateInput.set($event)"
+                class="w-full pl-10 pr-4 py-2 bg-[#151921] border border-white/15 rounded-lg text-base font-bold font-mono text-amber-300 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
+          <div>
+            <span class="text-[11px] text-slate-400 block mb-1">Nota / Referencia:</span>
+            <input 
+              type="text" 
+              placeholder="Ej. Tasa BCV al cierre del día..." 
+              [ngModel]="updateNote()" 
+              (ngModelChange)="updateNote.set($event)"
+              class="w-full px-3 py-2 bg-[#151921] border border-white/15 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/5">
+          <span>Última modificación: <strong class="text-slate-200 font-mono">{{ exchangeService.lastUpdated() | date:'short' }}</strong></span>
+          <span>Por: <strong class="text-slate-200">{{ exchangeService.updatedBy() }}</strong></span>
+        </div>
+
+        @if (auth.permissions().canManagePayroll) {
+          <button 
+            type="button" 
+            (click)="saveNewRate()"
+            [disabled]="isSaving()"
+            class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+            @if (isSaving()) {
+              <span class="material-symbols-outlined text-base animate-spin">refresh</span>
+              <span>Guardando en Firestore...</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">save</span>
+              <span>Guardar Tasa BCV en el Sistema</span>
+            }
+          </button>
+        } @else {
+          <p class="text-[11px] text-amber-400/80 italic text-center">
+            * Se requiere rol de Administrador para modificar la tasa de cambio oficial.
+          </p>
+        }
+      </div>
+
+      <!-- Quick Interactive Dual Calculator -->
+      <div class="bg-[#151921] p-4 rounded-xl border border-white/10 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="material-symbols-outlined text-blue-400 text-base">calculate</span>
+            Calculadora Dual Rápida
+          </h3>
+          <span class="text-[10px] text-slate-400 font-mono">1 USD = {{ newRateInput() || exchangeService.bcvRate() }} Bs.</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-[#0B0E14] p-3 rounded-lg border border-white/10">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Monto en USD ($)</span>
+            <div class="relative">
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-400 font-bold">$</span>
+              <input 
+                type="number" 
+                [ngModel]="calcUsd()" 
+                (ngModelChange)="updateCalcUsd($event)"
+                class="w-full pl-7 pr-2 py-1.5 bg-transparent text-sm font-bold font-mono text-white focus:outline-none">
+            </div>
+          </div>
+
+          <div class="bg-[#0B0E14] p-3 rounded-lg border border-white/10">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Equivalente en Bolívares (Bs.)</span>
+            <div class="relative">
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-400 font-bold">Bs.</span>
+              <input 
+                type="number" 
+                [ngModel]="calcBs()" 
+                (ngModelChange)="updateCalcBs($event)"
+                class="w-full pl-9 pr-2 py-1.5 bg-transparent text-sm font-bold font-mono text-amber-300 focus:outline-none">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rate History Log -->
+      <div class="space-y-2">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+          <span class="material-symbols-outlined text-slate-400 text-base">history</span>
+          Historial Reciente de Tasas BCV
+        </h4>
+
+        <div class="bg-[#0B0E14] rounded-xl border border-white/10 overflow-hidden max-h-36 overflow-y-auto">
+          <table class="w-full text-left text-[11px]">
+            <thead class="bg-white/5 text-slate-400 uppercase text-[9px] font-bold border-b border-white/10">
+              <tr>
+                <th class="py-2 px-3">Tasa (Bs./USD)</th>
+                <th class="py-2 px-3">Fecha</th>
+                <th class="py-2 px-3">Registrado por</th>
+                <th class="py-2 px-3">Nota</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              @for (item of exchangeService.rateHistory(); track item.date) {
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="py-2 px-3 font-bold font-mono text-amber-400">Bs. {{ item.rate }}</td>
+                  <td class="py-2 px-3 text-slate-400 font-mono text-[10px]">{{ item.date | date:'shortDate' }}</td>
+                  <td class="py-2 px-3 text-slate-300">{{ item.updatedBy }}</td>
+                  <td class="py-2 px-3 text-slate-500 italic truncate max-w-[120px]">{{ item.note || 'Ajuste manual' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="py-3 px-3 text-center text-slate-500 italic">No hay historial anterior registrado.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between pt-2 border-t border-white/10">
+        <span class="text-[10px] text-slate-500">Fuente oficial: Banco Central de Venezuela (bcv.org.ve)</span>
+        <button 
+          type="button" 
+          (click)="onClose()"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-lg text-xs font-bold transition-colors">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

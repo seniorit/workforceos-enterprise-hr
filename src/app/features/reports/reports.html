@@ -1,0 +1,477 @@
+<app-header title="Centro de Reportes Oficiales & Exportación PDF" subtitle="Emisión de listados e informes de nómina, personal y asistencia"></app-header>
+
+<main class="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+
+  <!-- Success Toast Notice -->
+  @if (notice()) {
+    <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 p-4 rounded-xl flex items-center justify-between text-xs font-semibold shadow-lg animate-entrance">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-lg text-emerald-400">check_circle</span>
+        <span>{{ notice() }}</span>
+      </div>
+      <button (click)="notice.set(null)" type="button" class="text-emerald-400 hover:text-white">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Header Banner & Exchange Rate Widget -->
+  <div class="bg-gradient-to-r from-[#151921] via-[#1E293B] to-[#151921] p-5 sm:p-6 rounded-2xl border border-white/10 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-2xl text-red-400">picture_as_pdf</span>
+        <h1 class="text-lg font-bold text-white tracking-tight">Módulo de Reportología PDF & Archivos</h1>
+      </div>
+      <p class="text-xs text-slate-400 max-w-2xl">
+        Generación automatizada de reportes normativos en PDF para nóminas en doble moneda (USD/VES), nómina ejecutiva, listados de empleados e historial de asistencia con sellos de emisión.
+      </p>
+    </div>
+
+    <!-- Rate Info Pill -->
+    <div class="bg-[#0B0E14] border border-amber-500/30 px-4 py-2.5 rounded-xl flex items-center gap-3 shrink-0">
+      <div class="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+        <span class="material-symbols-outlined text-xl">currency_exchange</span>
+      </div>
+      <div>
+        <span class="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Tasa BCV de Referencia</span>
+        <span class="text-sm font-extrabold text-amber-400 font-mono">1 USD = Bs. {{ exchangeService.bcvRate() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs for the 3 Operations -->
+  <div class="flex items-center gap-2 border-b border-white/10 pb-1 overflow-x-auto">
+    <button 
+      (click)="activeReport.set('EMPLOYEES')" 
+      type="button"
+      [class]="activeReport() === 'EMPLOYEES' 
+        ? 'bg-blue-600/20 text-blue-400 border-blue-500/40 font-bold' 
+        : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-white/5'"
+      class="px-4 py-3 rounded-xl border text-xs flex items-center gap-2 transition-all shrink-0">
+      <span class="material-symbols-outlined text-lg">badge</span>
+      <span>1. Lista de Empleados</span>
+    </button>
+
+    <button 
+      (click)="activeReport.set('PAYROLL')" 
+      type="button"
+      [class]="activeReport() === 'PAYROLL' 
+        ? 'bg-blue-600/20 text-blue-400 border-blue-500/40 font-bold' 
+        : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-white/5'"
+      class="px-4 py-3 rounded-xl border text-xs flex items-center gap-2 transition-all shrink-0">
+      <span class="material-symbols-outlined text-lg">payments</span>
+      <span>2. Nómina Generada</span>
+    </button>
+
+    <button 
+      (click)="activeReport.set('ATTENDANCE_LEAVES')" 
+      type="button"
+      [class]="activeReport() === 'ATTENDANCE_LEAVES' 
+        ? 'bg-blue-600/20 text-blue-400 border-blue-500/40 font-bold' 
+        : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-white/5'"
+      class="px-4 py-3 rounded-xl border text-xs flex items-center gap-2 transition-all shrink-0">
+      <span class="material-symbols-outlined text-lg">event_available</span>
+      <span>3. Asistencias Y Permisos (Período)</span>
+    </button>
+  </div>
+
+  <!-- ==================== REPORT 1: LISTA DE EMPLEADOS ==================== -->
+  @if (activeReport() === 'EMPLOYEES') {
+    <div class="space-y-5 animate-entrance">
+      
+      <!-- Filter Bar & Export Actions -->
+      <div class="bg-[#151921] p-4 rounded-xl border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          
+          <div>
+            <label for="empDeptFilter" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Departamento</label>
+            <select 
+              id="empDeptFilter"
+              [ngModel]="empDepartmentFilter()" 
+              (ngModelChange)="empDepartmentFilter.set($event)"
+              class="px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todos los Departamentos</option>
+              @for (dept of departments(); track dept) {
+                <option [value]="dept">{{ dept }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="empStatFilter" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Estatus Laboral</label>
+            <select 
+              id="empStatFilter"
+              [ngModel]="empStatusFilter()" 
+              (ngModelChange)="empStatusFilter.set($event)"
+              class="px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todos los Estatus</option>
+              <option value="ACTIVO">Activos</option>
+              <option value="INACTIVO">Inactivos</option>
+              <option value="VACACIONES">Vacaciones / Permiso</option>
+            </select>
+          </div>
+
+        </div>
+
+        <button 
+          (click)="generateEmployeeListPdf()" 
+          type="button"
+          class="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg transition-all shrink-0 active:scale-[0.98]">
+          <span class="material-symbols-outlined text-lg">download_for_offline</span>
+          <span>Descargar Reporte PDF</span>
+        </button>
+      </div>
+
+      <!-- KPI Overview Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-[#151921] p-4 rounded-xl border border-white/10">
+          <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Total Colaboradores Seleccionados</p>
+          <p class="text-2xl font-black text-white font-mono">{{ filteredEmployees().length }}</p>
+        </div>
+
+        <div class="bg-[#151921] p-4 rounded-xl border border-white/10">
+          <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Masa Salarial Base (USD)</p>
+          <p class="text-2xl font-black text-emerald-400 font-mono">$ {{ totalEmployeesUsdPayroll().toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
+        </div>
+
+        <div class="bg-[#151921] p-4 rounded-xl border border-white/10">
+          <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Masa Salarial Base en Bolívares (BCV)</p>
+          <p class="text-2xl font-black text-amber-400 font-mono">Bs. {{ totalEmployeesBsPayroll().toLocaleString('es-VE', { minimumFractionDigits: 2 }) }}</p>
+        </div>
+      </div>
+
+      <!-- Printable Document Sheet Preview -->
+      <div class="bg-white text-slate-900 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 overflow-hidden">
+        
+        <!-- Sheet Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black tracking-tight text-xl text-slate-900">WORKFORCE OS VENEZUELA</span>
+              <span class="text-[10px] font-mono bg-slate-900 text-white px-2 py-0.5 rounded font-bold">PDF-GEN</span>
+            </div>
+            <p class="text-xs text-slate-600 font-semibold mt-0.5">Reporte de Directorio de Personal & Masa Salarial</p>
+          </div>
+          <div class="text-left sm:text-right text-xs text-slate-500 font-mono">
+            <p><span class="font-bold text-slate-700">Tasa BCV:</span> Bs. {{ exchangeService.bcvRate() }} / USD</p>
+            <p><span class="font-bold text-slate-700">Registros:</span> {{ filteredEmployees().length }} Empleados</p>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-900 text-white uppercase text-[10px] tracking-wider font-bold">
+                <th class="p-2.5">ID / Cédula</th>
+                <th class="p-2.5">Nombre Completo</th>
+                <th class="p-2.5">Departamento / Cargo</th>
+                <th class="p-2.5">Estatus</th>
+                <th class="p-2.5 text-right">Sueldo USD</th>
+                <th class="p-2.5 text-right">Sueldo Bs. (BCV)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              @for (emp of filteredEmployees(); track emp.id || emp.employeeId) {
+                <tr class="hover:bg-slate-50 font-sans">
+                  <td class="p-2.5 font-mono font-bold text-slate-800">
+                    {{ emp.employeeId }}
+                    <span class="block text-[10px] text-slate-500 font-normal">{{ emp.personalId || 'N/A' }}</span>
+                  </td>
+                  <td class="p-2.5 font-bold text-slate-900">{{ emp.fullName }}</td>
+                  <td class="p-2.5">
+                    <span class="font-semibold text-slate-800 block">{{ emp.department }}</span>
+                    <span class="text-[10px] text-slate-500">{{ emp.position }}</span>
+                  </td>
+                  <td class="p-2.5">
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      {{ emp.status || 'Activo' }}
+                    </span>
+                  </td>
+                  <td class="p-2.5 text-right font-mono font-bold text-slate-900">
+                    $ {{ exchangeService.parseUsdValue(emp.fixedSalary).toFixed(2) }}
+                  </td>
+                  <td class="p-2.5 text-right font-mono font-bold text-slate-900">
+                    Bs. {{ exchangeService.usdToBs(exchangeService.parseUsdValue(emp.fixedSalary)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+  }
+
+  <!-- ==================== REPORT 2: NÓMINA GENERADA ==================== -->
+  @if (activeReport() === 'PAYROLL') {
+    <div class="space-y-5 animate-entrance">
+
+      <!-- Filter Controls & Export Actions -->
+      <div class="bg-[#151921] p-4 rounded-xl border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <div>
+            <label for="payrollPeriodSel" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Seleccionar Período de Nómina</label>
+            <select 
+              id="payrollPeriodSel"
+              [ngModel]="payrollPeriod()" 
+              (ngModelChange)="payrollPeriod.set($event)"
+              class="px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-blue-500">
+              <option value="Quincena Actual (2da Julio 2026)">Quincena Actual (2da Julio 2026)</option>
+              <option value="1ra Quincena Julio 2026">1ra Quincena Julio 2026</option>
+              <option value="2da Quincena Junio 2026">2da Quincena Junio 2026</option>
+              <option value="1ra Quincena Junio 2026">1ra Quincena Junio 2026</option>
+              <option value="Nómina Especial Vacacional 2026">Nómina Especial Vacacional 2026</option>
+            </select>
+          </div>
+        </div>
+
+        <button 
+          (click)="generatePayrollPdf()" 
+          type="button"
+          class="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg transition-all shrink-0 active:scale-[0.98]">
+          <span class="material-symbols-outlined text-lg">download_for_offline</span>
+          <span>Descargar Reporte PDF Nómina</span>
+        </button>
+      </div>
+
+      <!-- Printable Payroll Document Sheet Preview -->
+      <div class="bg-white text-slate-900 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 overflow-hidden">
+        
+        <!-- Sheet Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black tracking-tight text-xl text-slate-900">WORKFORCE OS VENEZUELA</span>
+              <span class="text-[10px] font-mono bg-blue-900 text-white px-2 py-0.5 rounded font-bold">NOM-DET</span>
+            </div>
+            <p class="text-xs text-slate-600 font-bold mt-0.5">Resumen de Liquidación de Nómina en Bolívares y Dólares</p>
+          </div>
+          <div class="text-left sm:text-right text-xs text-slate-600 font-mono">
+            <p><span class="font-bold text-slate-900">Período:</span> {{ payrollPeriod() }}</p>
+            <p><span class="font-bold text-slate-900">Tasa BCV Aplicada:</span> Bs. {{ exchangeService.bcvRate() }} / USD</p>
+          </div>
+        </div>
+
+        <!-- Totals Banner -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-100 p-4 rounded-xl border border-slate-300">
+          <div>
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Colaboradores a Cobrar</p>
+            <p class="text-xl font-black text-slate-900 font-mono">{{ empService.employees().length }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Base USD ($)</p>
+            <p class="text-xl font-black text-slate-900 font-mono">$ {{ totalEmployeesUsdPayroll().toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Total Dispersión Bs. (BCV)</p>
+            <p class="text-xl font-black text-amber-900 font-mono">Bs. {{ totalEmployeesBsPayroll().toLocaleString('es-VE', { minimumFractionDigits: 2 }) }}</p>
+          </div>
+        </div>
+
+        <!-- Payroll Detail Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-blue-950 text-white uppercase text-[10px] tracking-wider font-bold">
+                <th class="p-2.5">ID / Empleado</th>
+                <th class="p-2.5">Banco / Pago Móvil</th>
+                <th class="p-2.5">Número de Cuenta / Teléfono</th>
+                <th class="p-2.5 text-right">Monto Base USD</th>
+                <th class="p-2.5 text-right">Monto a Abonar (Bs.)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              @for (emp of empService.employees(); track emp.id || emp.employeeId) {
+                @let usd = exchangeService.parseUsdValue(emp.fixedSalary);
+                @let bs = exchangeService.usdToBs(usd);
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2.5 font-bold text-slate-900">
+                    {{ emp.fullName }}
+                    <span class="block text-[10px] text-slate-500 font-mono">{{ emp.employeeId }} • {{ emp.personalId || 'CI' }}</span>
+                  </td>
+                  <td class="p-2.5 text-slate-800">
+                    {{ emp.bank ? emp.bank : (emp.mobilePhone ? 'Pago Móvil (' + (emp.mobileBankCode || '0105') + ')' : 'Efectivo / Por asignar') }}
+                  </td>
+                  <td class="p-2.5 font-mono text-slate-700">
+                    {{ emp.accountNumber ? emp.accountNumber : (emp.mobilePhone ? emp.mobilePhone : '-') }}
+                  </td>
+                  <td class="p-2.5 text-right font-mono font-bold text-slate-900">$ {{ usd.toFixed(2) }}</td>
+                  <td class="p-2.5 text-right font-mono font-bold text-amber-900 bg-amber-50/50">
+                    Bs. {{ bs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+  }
+
+  <!-- ==================== REPORT 3: ASISTENCIAS Y PERMISOS (FECHAS) ==================== -->
+  @if (activeReport() === 'ATTENDANCE_LEAVES') {
+    <div class="space-y-5 animate-entrance">
+
+      <!-- Filter Controls & Date Pickers -->
+      <div class="bg-[#151921] p-4 rounded-xl border border-white/10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
+          <div>
+            <label for="attStartDate" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fecha Desde *</label>
+            <input 
+              id="attStartDate"
+              type="date" 
+              [ngModel]="startDate()" 
+              (ngModelChange)="startDate.set($event)"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label for="attEndDate" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fecha Hasta *</label>
+            <input 
+              id="attEndDate"
+              type="date" 
+              [ngModel]="endDate()" 
+              (ngModelChange)="endDate.set($event)"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label for="attTypeSel" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tipo de Evento</label>
+            <select 
+              id="attTypeSel"
+              [ngModel]="attTypeFilter()" 
+              (ngModelChange)="attTypeFilter.set($event)"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todos los Eventos</option>
+              <option value="ASISTENCIA">Solo Asistencias</option>
+              <option value="INASISTENCIA">Solo Inasistencias / Permisos</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="attEmpSel" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Colaborador</label>
+            <select 
+              id="attEmpSel"
+              [ngModel]="attEmpFilter()" 
+              (ngModelChange)="attEmpFilter.set($event)"
+              class="w-full px-3 py-2 bg-[#0B0E14] border border-white/15 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-blue-500">
+              <option value="ALL">Todos los Empleados</option>
+              @for (emp of empService.employees(); track emp.id || emp.employeeId) {
+                <option [value]="emp.fullName">{{ emp.fullName }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <button 
+          (click)="generateAttendanceLeavesPdf()" 
+          type="button"
+          class="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg transition-all shrink-0 active:scale-[0.98]">
+          <span class="material-symbols-outlined text-lg">download_for_offline</span>
+          <span>Descargar PDF Asistencias</span>
+        </button>
+      </div>
+
+      <!-- Overview Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-[#151921] p-4 rounded-xl border border-white/10">
+          <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Registros Evaluados en Rango</p>
+          <p class="text-2xl font-black text-white font-mono">{{ filteredAttendanceAndLeaves().length }}</p>
+        </div>
+
+        <div class="bg-[#151921] p-4 rounded-xl border border-white/10">
+          <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Total Asistencias Registradas</p>
+          <p class="text-2xl font-black text-emerald-400 font-mono">{{ totalAttendanceCount() }}</p>
+        </div>
+
+        <div class="bg-[#151921] p-4 rounded-xl border border-white/10">
+          <p class="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Total Inasistencias & Permisos</p>
+          <p class="text-2xl font-black text-rose-400 font-mono">{{ totalAbsenceCount() }}</p>
+        </div>
+      </div>
+
+      <!-- Printable Sheet Preview -->
+      <div class="bg-white text-slate-900 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 overflow-hidden">
+        
+        <!-- Sheet Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black tracking-tight text-xl text-slate-900">WORKFORCE OS VENEZUELA</span>
+              <span class="text-[10px] font-mono bg-emerald-900 text-white px-2 py-0.5 rounded font-bold">ATT-REP</span>
+            </div>
+            <p class="text-xs text-slate-600 font-bold mt-0.5">Listado Unificado de Asistencia, Inasistencia y Permisos</p>
+          </div>
+          <div class="text-left sm:text-right text-xs text-slate-600 font-mono">
+            <p><span class="font-bold text-slate-900">Rango:</span> {{ startDate() }} al {{ endDate() }}</p>
+            <p><span class="font-bold text-slate-900">Total Ocurrencias:</span> {{ filteredAttendanceAndLeaves().length }}</p>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-emerald-950 text-white uppercase text-[10px] tracking-wider font-bold">
+                <th class="p-2.5">Fecha</th>
+                <th class="p-2.5">Colaborador</th>
+                <th class="p-2.5">Tipo Evento</th>
+                <th class="p-2.5">Horario / Causa</th>
+                <th class="p-2.5">Detalles / Justificación</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              @for (rec of filteredAttendanceAndLeaves(); track rec.id) {
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2.5 font-mono font-bold text-slate-900">{{ rec.date }}</td>
+                  <td class="p-2.5 font-bold text-slate-900">
+                    {{ rec.employeeName }}
+                    <span class="block text-[10px] text-slate-500 font-normal">{{ rec.department || 'General' }}</span>
+                  </td>
+                  <td class="p-2.5">
+                    @if (rec.type === 'ASISTENCIA') {
+                      <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        Asistencia
+                      </span>
+                    } @else {
+                      <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300">
+                        Inasistencia / Permiso
+                      </span>
+                    }
+                  </td>
+                  <td class="p-2.5 font-semibold text-slate-800">
+                    @if (rec.type === 'ASISTENCIA') {
+                      <span>{{ rec.checkInTime || '08:00 AM' }} - {{ rec.checkOutTime || '05:00 PM' }}</span>
+                    } @else {
+                      <span>{{ rec.absenceReason || 'Permiso Personal' }}</span>
+                    }
+                  </td>
+                  <td class="p-2.5 text-slate-600 text-[11px]">
+                    @if (rec.type === 'ASISTENCIA') {
+                      <span class="font-bold text-slate-700">Condición: {{ rec.condition || 'Puntual' }}</span>
+                      @if (rec.details) { <span class="block text-[10px] text-slate-500">{{ rec.details }}</span> }
+                    } @else {
+                      <span class="font-bold" [class]="rec.isJustified ? 'text-emerald-700' : 'text-rose-700'">
+                        {{ rec.isJustified ? 'JUSTIFICADA' : 'INJUSTIFICADA' }}
+                      </span>
+                      @if (rec.details) { <span class="block text-[10px] text-slate-500">{{ rec.details }}</span> }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+  }
+
+</main>

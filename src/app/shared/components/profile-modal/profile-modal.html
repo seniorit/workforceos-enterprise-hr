@@ -1,0 +1,180 @@
+@if (isOpen()) {
+  <div 
+    tabindex="-1"
+    class="backdrop-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-entrance"
+    (click)="handleBackdropClick($event)"
+    (keyup.escape)="closeModal.emit()">
+    
+    <div class="bg-[#151921] border border-white/10 rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-white/10 bg-[#0F172A] flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-600/30 flex items-center justify-center text-blue-400 font-bold text-lg">
+            <span class="material-symbols-outlined text-2xl">account_circle</span>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <span>Editar Mi Perfil Personal</span>
+              <span class="text-[10px] font-bold text-blue-400 bg-blue-600/10 border border-blue-600/20 px-2 py-0.5 rounded uppercase tracking-wider">
+                Firestore
+              </span>
+            </h2>
+            <p class="text-xs text-slate-400">Actualiza tu nombre, biografía y datos de contacto en vivo</p>
+          </div>
+        </div>
+
+        <button 
+          (click)="closeModal.emit()" 
+          [disabled]="isSaving()"
+          type="button"
+          class="p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <!-- User Meta Banner -->
+      <div class="bg-[#0B0E14] px-5 py-3 border-b border-white/5 flex items-center justify-between text-xs shrink-0">
+        <div class="flex items-center gap-2 text-slate-300">
+          <span class="material-symbols-outlined text-sm text-slate-400">mail</span>
+          <span class="font-mono text-slate-400">{{ auth.currentUser()?.email }}</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-500 font-medium text-[11px]">Rol actual:</span>
+          <span class="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-[10px] rounded uppercase tracking-wider">
+            {{ auth.currentRole() }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Feedback Messages -->
+      @if (successMessage()) {
+        <div class="m-5 mb-0 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-lg">check_circle</span>
+          <span class="font-semibold">{{ successMessage() }}</span>
+        </div>
+      }
+
+      @if (errorMessage()) {
+        <div class="m-5 mb-0 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-lg">error</span>
+          <span class="font-semibold">{{ errorMessage() }}</span>
+        </div>
+      }
+
+      <!-- Modal Body Form -->
+      <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="p-5 space-y-4 overflow-y-auto flex-1">
+        
+        <!-- Name Field -->
+        <div>
+          <label for="profileDisplayName" class="block text-xs font-semibold text-slate-300 mb-1">
+            Nombre Completo <span class="text-red-400">*</span>
+          </label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">person</span>
+            <input 
+              id="profileDisplayName"
+              type="text" 
+              formControlName="displayName"
+              placeholder="Ej. Alex Rivera"
+              class="w-full pl-9 pr-4 py-2 bg-[#0B0E14] border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors">
+          </div>
+          @if (profileForm.get('displayName')?.invalid && profileForm.get('displayName')?.touched) {
+            <p class="text-[11px] text-red-400 mt-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs">info</span>
+              El nombre completo es requerido (mínimo 2 caracteres).
+            </p>
+          }
+        </div>
+
+        <!-- Position/Title & Department Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="profileTitle" class="block text-xs font-semibold text-slate-300 mb-1">Cargo / Puesto</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">work</span>
+              <input 
+                id="profileTitle"
+                type="text" 
+                formControlName="title"
+                placeholder="Ej. Director de Operaciones"
+                class="w-full pl-9 pr-4 py-2 bg-[#0B0E14] border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors">
+            </div>
+          </div>
+
+          <div>
+            <label for="profileDepartment" class="block text-xs font-semibold text-slate-300 mb-1">Departamento</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">apartment</span>
+              <input 
+                id="profileDepartment"
+                type="text" 
+                formControlName="department"
+                placeholder="Ej. Recursos Humanos"
+                class="w-full pl-9 pr-4 py-2 bg-[#0B0E14] border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors">
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Phone Details -->
+        <div>
+          <label for="profilePhone" class="block text-xs font-semibold text-slate-300 mb-1">Teléfono / Detalle de Contacto</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">call</span>
+            <input 
+              id="profilePhone"
+              type="text" 
+              formControlName="phone"
+              placeholder="Ej. +507 6982-4110"
+              class="w-full pl-9 pr-4 py-2 bg-[#0B0E14] border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors">
+          </div>
+        </div>
+
+        <!-- Bio / Personal Profile -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="profileBio" class="block text-xs font-semibold text-slate-300">Biografía / Resumen Profesional</label>
+            <span class="text-[10px] text-slate-500 font-mono" [class.text-amber-400]="bioLength > 280">
+              {{ bioLength }}/300
+            </span>
+          </div>
+          <textarea 
+            id="profileBio"
+            formControlName="bio"
+            rows="3"
+            placeholder="Escribe una breve descripción de tus responsabilidades o información personal..."
+            class="w-full p-3 bg-[#0B0E14] border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors resize-none"></textarea>
+          @if (profileForm.get('bio')?.hasError('maxlength')) {
+            <p class="text-[11px] text-red-400 mt-1">La biografía no debe exceder 300 caracteres.</p>
+          }
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="pt-3 border-t border-white/10 flex items-center justify-end gap-2 shrink-0">
+          <button 
+            type="button" 
+            (click)="closeModal.emit()"
+            [disabled]="isSaving()"
+            class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
+            Cancelar
+          </button>
+
+          <button 
+            type="submit" 
+            [disabled]="isSaving()"
+            class="px-5 py-2 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors inline-flex items-center gap-2 shadow-sm">
+            @if (isSaving()) {
+              <span class="material-symbols-outlined text-sm animate-spin">sync</span>
+              <span>Guardando en Firestore...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">save</span>
+              <span>Guardar Cambios</span>
+            }
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+}
