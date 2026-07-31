@@ -21,74 +21,7 @@ export class AttendanceService {
   public leaveRequests = signal<LeaveRequest[]>([]);
   public isLoading = signal<boolean>(true);
 
-  private readonly INITIAL_RECORDS: AttendanceRecord[] = [
-    {
-      id: 'att-001',
-      employeeId: 'WF-1001-EMP',
-      employeeName: 'Alice Morgan',
-      department: 'Ventas y Marketing',
-      date: new Date().toISOString().split('T')[0],
-      type: 'ASISTENCIA',
-      checkInTime: '08:00 AM',
-      checkOutTime: '05:00 PM',
-      condition: 'Puntual',
-      details: 'Jornada regular registrada por supervisión.',
-      loggedBy: 'Administración',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'att-002',
-      employeeId: 'WF-1002-EMP',
-      employeeName: 'Robert Tang',
-      department: 'Operaciones',
-      date: new Date().toISOString().split('T')[0],
-      type: 'ASISTENCIA',
-      checkInTime: '08:14 AM',
-      checkOutTime: '05:00 PM',
-      condition: 'Remoto',
-      details: 'Jornada remota autorizada.',
-      loggedBy: 'Administración',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'att-003',
-      employeeId: 'WF-1003-EMP',
-      employeeName: 'Carlos Mendoza',
-      department: 'Ingeniería',
-      date: new Date().toISOString().split('T')[0],
-      type: 'INASISTENCIA',
-      absenceReason: 'Reposo Médico / Incapacidad',
-      isJustified: true,
-      details: 'Presenta reposo de IVSS por 3 días por cuadro febril.',
-      loggedBy: 'Administración',
-      createdAt: new Date().toISOString(),
-    }
-  ];
-
-  private readonly INITIAL_LEAVE_REQUESTS: LeaveRequest[] = [
-    {
-      id: 'leave-1',
-      employeeId: 'WF-0002',
-      employeeName: 'Alice Morgan',
-      type: 'Permiso Personal',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
-      reason: 'Cita médica especialista',
-      status: 'Registrada',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'leave-2',
-      employeeId: 'WF-0003',
-      employeeName: 'Robert Tang',
-      type: 'Vacaciones',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
-      reason: 'Período vacacional acumulado',
-      status: 'Registrada',
-      createdAt: new Date().toISOString(),
-    }
-  ];
+  public isPurging = false;
 
   constructor() {
     this.initRealtimeSync();
@@ -102,8 +35,9 @@ export class AttendanceService {
       onSnapshot(
         attCol,
         (snapshot) => {
+          if (this.isPurging) return;
           if (snapshot.empty) {
-            this.records.set(this.INITIAL_RECORDS);
+            this.records.set([]);
             this.isLoading.set(false);
           } else {
             const list: AttendanceRecord[] = [];
@@ -116,13 +50,15 @@ export class AttendanceService {
         },
         (error) => {
           console.warn('Firestore attendance snapshot error, fallback:', error);
-          this.records.set(this.INITIAL_RECORDS);
+          if (!this.isPurging) {
+            this.records.set([]);
+          }
           this.isLoading.set(false);
         }
       );
     } catch (e) {
       console.warn('Attendance sync error, fallback:', e);
-      this.records.set(this.INITIAL_RECORDS);
+      this.records.set([]);
       this.isLoading.set(false);
     }
 
@@ -133,8 +69,9 @@ export class AttendanceService {
       onSnapshot(
         leaveCol,
         (snapshot) => {
+          if (this.isPurging) return;
           if (snapshot.empty) {
-            this.leaveRequests.set(this.INITIAL_LEAVE_REQUESTS);
+            this.leaveRequests.set([]);
           } else {
             const list: LeaveRequest[] = [];
             snapshot.forEach((docSnap) => {
@@ -145,12 +82,14 @@ export class AttendanceService {
         },
         (error) => {
           console.warn('Firestore leave requests snapshot error, fallback:', error);
-          this.leaveRequests.set(this.INITIAL_LEAVE_REQUESTS);
+          if (!this.isPurging) {
+            this.leaveRequests.set([]);
+          }
         }
       );
     } catch (e) {
       console.warn('Leave requests sync error, fallback:', e);
-      this.leaveRequests.set(this.INITIAL_LEAVE_REQUESTS);
+      this.leaveRequests.set([]);
     }
   }
 
@@ -263,20 +202,7 @@ export class AttendanceService {
    * Destructively purges all attendance records & leave requests in Firestore
    */
   public async purgeAttendanceRecordsAndResetToSuperAdmin(): Promise<void> {
-    const initialStaffRecord: Omit<AttendanceRecord, 'id'> = {
-      employeeId: 'WF-1001-EMP',
-      employeeName: 'Alice Morgan',
-      department: 'Ventas y Marketing',
-      date: new Date().toISOString().split('T')[0],
-      type: 'ASISTENCIA',
-      checkInTime: '08:00 AM',
-      checkOutTime: '05:00 PM',
-      condition: 'Puntual',
-      details: 'Jornada regular inicial reestablecida tras purga.',
-      loggedBy: 'Administración',
-      createdAt: new Date().toISOString(),
-    };
-
+    this.isPurging = true;
     try {
       // Delete attendance records
       const attCol = collection(this.firebase.db, 'attendance_records');
@@ -300,13 +226,14 @@ export class AttendanceService {
         }
       }
 
-      const docRef = await addDoc(attCol, initialStaffRecord);
-      this.records.set([{ id: docRef.id, ...initialStaffRecord }]);
+      this.records.set([]);
       this.leaveRequests.set([]);
     } catch (e) {
       console.warn('Error during attendance Firestore purge:', e);
-      this.records.set([{ id: 'att-sample-staff', ...initialStaffRecord }]);
+      this.records.set([]);
       this.leaveRequests.set([]);
+    } finally {
+      this.isPurging = false;
     }
   }
 }
